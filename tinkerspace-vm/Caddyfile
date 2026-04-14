@@ -1,0 +1,6 @@
+{
+	email admin@tharavad.xyz
+}
+
+# Import user-defined reverse proxies
+import /var/tinker/caddy/*.conf

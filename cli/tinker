@@ -1,0 +1,93 @@
+#!/bin/bash
+# tinker-cli — TinkerHub Kerala community server tools
+# Install: cp tinker /usr/local/bin/tinker && chmod 755 /usr/local/bin/tinker
+
+PORTS_DIR="/var/tinker/ports"
+CADDY_DIR="/var/tinker/caddy"
+CADDY_MAIN="/etc/caddy/users.d"
+PORT_START=10000
+PORT_END=60000
+
+mkdir -p "$PORTS_DIR" "$CADDY_DIR" "$CADDY_MAIN"
+
+cmd_help() {
+  cat << EOF
+tinker — TinkerHub Kerala community server CLI
+
+Commands:
+  tinker port            Reserve a random port for your services
+  tinker port list       Show your reserved ports
+  tinker caddy <port>    Expose port at https://\$(whoami).tharavad.xyz
+  tinker caddy remove    Remove your Caddy entry
+  tinker help            Show this help
+EOF
+}
+
+cmd_port() {
+  local user
+  user=$(whoami)
+
+  if [[ "$1" == "list" ]]; then
+    echo "Your reserved ports:"
+    grep -r "^$user " "$PORTS_DIR" 2>/dev/null | awk '{print $2}' || echo "none"
+    return
+  fi
+
+  # Find a free port
+  for i in $(seq $PORT_START $PORT_END | shuf); do
+    if ! grep -qr " $i$" "$PORTS_DIR" 2>/dev/null && ! ss -tlnp | grep -q ":$i "; then
+      echo "$user $i" >> "$PORTS_DIR/ports"
+      echo "$i"
+      return
+    fi
+  done
+
+  echo "Error: no free ports available" >&2
+  exit 1
+}
+
+cmd_caddy() {
+  local user
+  user=$(whoami)
+
+  if [[ "$1" == "remove" ]]; then
+    rm -f "$CADDY_DIR/$user.conf"
+    reload_caddy
+    echo "Removed caddy entry for $user"
+    return
+  fi
+
+  local port="$1"
+  if [[ -z "$port" ]]; then
+    echo "Usage: tinker caddy <port>" >&2
+    exit 1
+  fi
+
+  # Verify port belongs to user
+  if ! grep -q "^$user $port$" "$PORTS_DIR/ports" 2>/dev/null; then
+    echo "Error: port $port not reserved for you. Run 'tinker port' first." >&2
+    exit 1
+  fi
+
+  cat > "$CADDY_DIR/$user.conf" << EOF
+$user.tharavad.xyz {
+  reverse_proxy localhost:$port
+}
+EOF
+
+  reload_caddy
+  echo "Your service is live at https://$user.tharavad.xyz"
+}
+
+reload_caddy() {
+  # Merge all user configs into caddy users.d directory
+  cp "$CADDY_DIR"/*.conf "$CADDY_MAIN"/ 2>/dev/null
+  sudo /usr/bin/caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
+}
+
+case "$1" in
+  port)    shift; cmd_port "$@" ;;
+  caddy)   shift; cmd_caddy "$@" ;;
+  help|"") cmd_help ;;
+  *)       echo "Unknown command: $1"; cmd_help; exit 1 ;;
+esac
