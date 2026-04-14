@@ -68,33 +68,57 @@ cmd_caddy() {
   local user
   user=$(whoami)
 
-  if [[ "$1" == "remove" ]]; then
-    rm -f "$CADDY_DIR/$user.conf"
-    reload_caddy
-    echo "Removed caddy entry for $user"
+  if [[ "$1" == "list" ]]; then
+    echo "Your active subdomains:"
+    ls "$CADDY_DIR/${user}-"*.conf 2>/dev/null | while read f; do
+      grep "^http://" "$f" | sed 's/http:\/\//  /;s/ {//'
+    done || echo "  none"
     return
   fi
 
-  local port="$1"
-  if [[ -z "$port" ]]; then
-    echo "Usage: tinker caddy <port>" >&2
+  if [[ "$1" == "remove" ]]; then
+    local subdomain="$2"
+    if [[ -z "$subdomain" ]]; then
+      echo "Usage: tinker caddy remove <subdomain>" >&2
+      exit 1
+    fi
+    rm -f "$CADDY_DIR/${user}-${subdomain}.conf"
+    reload_caddy
+    echo "Removed: $subdomain.tharavad.xyz"
+    return
+  fi
+
+  # tinker caddy <subdomain> <port>
+  local subdomain="$1"
+  local port="$2"
+
+  if [[ -z "$subdomain" || -z "$port" ]]; then
+    echo "Usage: tinker caddy <subdomain> <port>" >&2
+    echo "       tinker caddy list" >&2
+    echo "       tinker caddy remove <subdomain>" >&2
+    exit 1
+  fi
+
+  # Only allow alphanumeric and hyphens in subdomain
+  if [[ ! "$subdomain" =~ ^[a-z0-9-]+$ ]]; then
+    echo "Error: subdomain must be lowercase letters, numbers, hyphens only." >&2
     exit 1
   fi
 
   # Verify port belongs to user
-  if ! grep -q "^$user $port$" "$PORTS_DIR/ports" 2>/dev/null; then
+  if ! grep -q "^$user $port " "$PORTS_DIR/ports" 2>/dev/null; then
     echo "Error: port $port not reserved for you. Run 'tinker port' first." >&2
     exit 1
   fi
 
-  cat > "$CADDY_DIR/$user.conf" << EOF
-http://$user.tharavad.xyz {
+  cat > "$CADDY_DIR/${user}-${subdomain}.conf" << EOF
+http://$subdomain.tharavad.xyz {
   reverse_proxy localhost:$port
 }
 EOF
 
   reload_caddy
-  echo "Your service is live at https://$user.tharavad.xyz"
+  echo "Live at https://$subdomain.tharavad.xyz"
 }
 
 reload_caddy() {
