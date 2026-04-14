@@ -35,6 +35,15 @@ headscale.tharavad.xyz {
 	reverse_proxy 10.10.0.2:8080
 }
 
+wiki.tharavad.xyz {
+	tls {
+		dns hetzner_cloud {env.HETZNER_TOKEN}
+		propagation_delay 2m
+	}
+	root * /var/www/tharavad/wiki
+	file_server
+}
+
 *.tharavad.xyz {
 	tls {
 		dns hetzner_cloud {env.HETZNER_TOKEN}
