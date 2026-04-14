@@ -29,7 +29,25 @@ cmd_port() {
 
   if [[ "$1" == "list" ]]; then
     echo "Your reserved ports:"
-    grep -r "^$user " "$PORTS_DIR" 2>/dev/null | awk '{print $2}' || echo "none"
+    grep "^$user " "$PORTS_DIR/ports" 2>/dev/null | awk '{print $2}' || echo "  none"
+    return
+  fi
+
+  if [[ "$1" == "release" ]]; then
+    local port="$2"
+    if [[ -z "$port" ]]; then
+      echo "Usage: tinker port release <port>" >&2
+      exit 1
+    fi
+    if ! grep -q "^$user $port " "$PORTS_DIR/ports" 2>/dev/null; then
+      echo "Error: port $port not allocated to you." >&2
+      exit 1
+    fi
+    sed -i "/^$user $port /d" "$PORTS_DIR/ports"
+    fuser -k "${port}/tcp" 2>/dev/null
+    rm -f "$CADDY_DIR/${user}-${port}.conf"
+    reload_caddy
+    echo "Released port $port"
     return
   fi
 
