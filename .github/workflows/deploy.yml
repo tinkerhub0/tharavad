@@ -10,7 +10,6 @@ on:
 jobs:
   deploy-www:
     runs-on: ubuntu-latest
-    if: contains(github.event.commits[0].modified, 'www/') || contains(github.event.commits[0].added, 'www/')
     steps:
       - uses: actions/checkout@v4
 
@@ -26,7 +25,6 @@ jobs:
 
   deploy-caddy:
     runs-on: ubuntu-latest
-    if: contains(github.event.commits[0].modified, 'vps/Caddyfile') || contains(github.event.commits[0].added, 'vps/Caddyfile')
     steps:
       - uses: actions/checkout@v4
 
