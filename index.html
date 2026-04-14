@@ -13,7 +13,8 @@
     --bg: #0e0e0e;
     --border: rgba(255,255,255,0.08);
     --text: #e8e8e8;
-    --muted: #666;
+    --muted: #555;
+    --muted2: #888;
     --green: #3fb950;
   }
 
@@ -32,17 +33,18 @@
   }
 
   header {
-    padding: 28px 40px;
+    padding: 32px 52px;
     display: flex;
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
   .wordmark {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 400;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.06em;
     color: var(--text);
     text-decoration: none;
   }
@@ -50,104 +52,169 @@
   .status {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 11px;
-    color: var(--muted);
-    letter-spacing: 0.05em;
+    gap: 9px;
+    font-size: 12px;
+    color: var(--muted2);
+    letter-spacing: 0.06em;
   }
 
   .dot {
-    width: 6px;
-    height: 6px;
+    width: 7px; height: 7px;
     border-radius: 50%;
     background: var(--green);
   }
 
   main {
     flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 0;
+  }
+
+  .left {
+    padding: 80px 52px;
     display: flex;
     flex-direction: column;
-    align-items: flex-start;
     justify-content: center;
-    padding: 80px 40px;
-    max-width: 680px;
+    border-right: 1px solid var(--border);
   }
 
   .label {
-    font-size: 11px;
-    letter-spacing: 0.18em;
+    font-size: 12px;
+    letter-spacing: 0.2em;
     color: var(--muted);
     text-transform: uppercase;
-    margin-bottom: 32px;
+    margin-bottom: 36px;
   }
 
   h1 {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: clamp(36px, 6vw, 68px);
+    font-size: clamp(44px, 5.5vw, 80px);
     font-weight: 300;
-    line-height: 1.1;
-    letter-spacing: -0.02em;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
     color: var(--text);
-    margin-bottom: 28px;
+    margin-bottom: 32px;
   }
 
   h1 .dim { color: var(--muted); }
 
   .description {
     font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 16px;
+    font-size: 17px;
     font-weight: 300;
-    line-height: 1.75;
-    color: #999;
-    max-width: 440px;
-    margin-bottom: 52px;
+    line-height: 1.8;
+    color: var(--muted2);
+    max-width: 420px;
+    margin-bottom: 56px;
   }
 
   .btn {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 13px 28px;
+    gap: 12px;
+    padding: 16px 34px;
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 13px;
-    letter-spacing: 0.06em;
+    font-size: 14px;
+    letter-spacing: 0.07em;
     text-decoration: none;
     color: #0e0e0e;
     background: #e8e8e8;
     border-radius: 2px;
     transition: background 0.15s, transform 0.1s;
+    align-self: flex-start;
   }
 
   .btn:hover { background: #fff; transform: translateY(-1px); }
   .btn:active { transform: translateY(0); }
 
   .btn svg {
-    width: 14px; height: 14px;
+    width: 15px; height: 15px;
     stroke: #0e0e0e; fill: none;
     stroke-width: 1.5;
     stroke-linecap: round; stroke-linejoin: round;
     transition: transform 0.15s;
   }
 
-  .btn:hover svg { transform: translateX(2px); }
+  .btn:hover svg { transform: translateX(3px); }
+
+  /* Right panel */
+  .right {
+    padding: 80px 52px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+  }
+
+  .specs-title {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 40px;
+  }
+
+  .spec-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 24px;
+  }
+
+  .spec-row:first-of-type { border-top: 1px solid var(--border); }
+
+  .spec-key {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    flex-shrink: 0;
+  }
+
+  .spec-val {
+    font-size: 14px;
+    color: var(--text);
+    letter-spacing: 0.04em;
+    text-align: right;
+  }
+
+  .spec-val.mono { font-family: 'IBM Plex Mono', monospace; }
+
+  .tag {
+    display: inline-block;
+    padding: 3px 10px;
+    font-size: 11px;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--muted2);
+    letter-spacing: 0.06em;
+    margin-left: 6px;
+  }
+
+  .tag.green { border-color: rgba(63,185,80,0.35); color: var(--green); }
 
   footer {
-    padding: 24px 40px;
+    padding: 24px 52px;
     border-top: 1px solid var(--border);
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
   }
 
   footer a { color: var(--muted); text-decoration: none; }
   footer a:hover { color: var(--text); }
 
-  @media (max-width: 600px) {
-    header, main, footer { padding-left: 24px; padding-right: 24px; }
-    main { padding-top: 60px; }
+  @media (max-width: 768px) {
+    main { grid-template-columns: 1fr; }
+    .left { border-right: none; border-bottom: 1px solid var(--border); padding: 52px 28px; }
+    .right { padding: 48px 28px; }
+    header, footer { padding-left: 28px; padding-right: 28px; }
   }
 </style>
 </head>
@@ -162,22 +229,56 @@
 </header>
 
 <main>
-  <p class="label">TinkerHub Kerala &mdash; Community Server</p>
-  <h1>A Linux server<br>for builders<span class="dim">.</span></h1>
-  <p class="description">
-    Shared infrastructure for TinkerHub Kerala members.
-    SSH in, run servers, host projects, learn in public.
-  </p>
-  <a class="btn" href="#">
-    Read the wiki
-    <svg viewBox="0 0 16 16"><line x1="3" y1="8" x2="13" y2="8"/><polyline points="9 4 13 8 9 12"/></svg>
-  </a>
+  <div class="left">
+    <p class="label">TinkerHub Kerala &mdash; Community Server</p>
+    <h1>A Linux<br>server for<br>baddies<span class="dim">.</span></h1>
+    <p class="description">
+      Shared infrastructure for TinkerHub Kerala members.
+      SSH in, run servers, host projects, learn in public.
+    </p>
+    <a class="btn" href="#">
+      Read the wiki
+      <svg viewBox="0 0 16 16"><line x1="3" y1="8" x2="13" y2="8"/><polyline points="9 4 13 8 9 12"/></svg>
+    </a>
+  </div>
+
+  <div class="right">
+    <p class="specs-title">Server specs</p>
+
+    <div class="spec-row">
+      <span class="spec-key">host</span>
+      <span class="spec-val mono">tharavad.xyz</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">ssh port</span>
+      <span class="spec-val mono">2222</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">storage</span>
+      <span class="spec-val">5 GB per user</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">tooling</span>
+      <span class="spec-val">python · node · go · rust · git</span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">access</span>
+      <span class="spec-val">
+        <span class="tag green">open signup</span>
+      </span>
+    </div>
+    <div class="spec-row">
+      <span class="spec-key">inspired by</span>
+      <span class="spec-val">
+        <a href="https://nest.hackclub.com" style="color:var(--muted2); text-decoration:none; font-size:14px; letter-spacing:0.04em;">Hack Club Nest ↗</a>
+      </span>
+    </div>
+  </div>
 </main>
 
 <footer>
   <span>ssh -p 2222 username@tharavad.xyz</span>
-  <h4>backed by Tinkerhub</h4>
-  <a href="https://github.com/tinkerhub0/tharavad">github</a>
+  <a href="https://github.com/tinkerhub0/tharavad">github ↗</a>
 </footer>
 
 </body>
