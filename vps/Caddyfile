@@ -1,0 +1,39 @@
+{
+	email admin@tharavad.xyz
+}
+
+tharavad.xyz {
+	root * /var/www/tharavad
+	file_server
+}
+
+*.tharavad.xyz {
+	tls {
+		dns hetzner_cloud {env.HETZNER_TOKEN}
+		propagation_delay 2m
+	}
+
+	@auth host auth.tharavad.xyz
+	handle @auth {
+		reverse_proxy 10.10.0.2:9000
+	}
+
+	@vault host vault.tharavad.xyz
+	handle @vault {
+		reverse_proxy 10.10.0.2:8181
+	}
+
+	@headscale host headscale.tharavad.xyz
+	handle @headscale {
+		reverse_proxy 10.10.0.2:8080
+	}
+
+	@chat host chat.tharavad.xyz
+	handle @chat {
+		reverse_proxy 10.10.0.2:8065
+	}
+
+	handle {
+		reverse_proxy 10.10.0.2:80
+	}
+}
