@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>tharavad — wiki</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0e;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8e8e8;
+    --muted: #555;
+    --muted2: #888;
+    --green: #3fb950;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400&display=swap');
+
+  header {
+    padding: 32px 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .wordmark {
+    font-size: 15px;
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  nav a {
+    font-size: 12px;
+    color: var(--muted2);
+    text-decoration: none;
+    letter-spacing: 0.06em;
+    margin-left: 32px;
+  }
+
+  nav a:hover { color: var(--text); }
+
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 72px 28px 120px;
+  }
+
+  .page-title {
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-size: 36px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    margin-bottom: 48px;
+    line-height: 1.2;
+  }
+
+  h2 {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin: 56px 0 20px;
+  }
+
+  h2:first-of-type { margin-top: 0; }
+
+  p {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--muted2);
+    margin-bottom: 16px;
+    max-width: 620px;
+  }
+
+  pre {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 20px 24px;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text);
+    overflow-x: auto;
+    margin: 20px 0;
+  }
+
+  code {
+    background: rgba(255,255,255,0.06);
+    padding: 2px 7px;
+    border-radius: 2px;
+    font-size: 13px;
+    color: var(--green);
+  }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 48px 0;
+  }
+
+  ul {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--muted2);
+    padding-left: 20px;
+    margin-bottom: 16px;
+  }
+
+  ul li { margin-bottom: 4px; }
+
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  footer {
+    padding: 24px 52px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 600px) {
+    header, footer { padding-left: 20px; padding-right: 20px; }
+    .container { padding: 48px 20px 80px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="wordmark" href="/">tharavad.xyz</a>
+  <nav>
+    <a href="/">home</a>
+    <a href="https://github.com/tinkerhub0/tharavad">github</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <p class="page-title">wiki</p>
+  <h1>Getting started</h1>
+
+  <h2>01 — Request access</h2>
+  <p>Sign up for an account. An admin will approve it shortly.</p>
+  <pre><a href="https://auth.tharavad.xyz/if/flow/tinkerhub-enrollment/" style="color:#3fb950;">https://auth.tharavad.xyz/if/flow/tinkerhub-enrollment/</a></pre>
+
+  <h2>02 — Add your SSH key</h2>
+  <p>Generate a key if you don't have one, then add it to your account.</p>
+  <pre># generate a key
+ssh-keygen -t ed25519 -C "you@email.com"
+
+# copy your public key
+cat ~/.ssh/id_ed25519.pub</pre>
+  <p>Paste it at: <a href="https://auth.tharavad.xyz/if/flow/add-ssh-key/">auth.tharavad.xyz/if/flow/add-ssh-key/</a></p>
+
+  <h2>03 — SSH in</h2>
+  <pre>ssh -p 2222 username@tharavad.xyz</pre>
+  <p>Optional — add to <code>~/.ssh/config</code> for a shorter command:</p>
+  <pre>Host tharavad
+    HostName tharavad.xyz
+    Port 2222
+    User username</pre>
+  <pre># then just
+ssh tharavad</pre>
+
+  <hr class="divider">
+
+  <h2>Hosting a project</h2>
+  <p>Use <code>tinker</code> to get a port and expose your service publicly.</p>
+  <pre># reserve a port
+tinker port
+→ 45320
+
+# start your server (use tmux so it keeps running)
+tmux new -s myproject
+python3 -m http.server 45320
+
+# expose it at yourname.tharavad.xyz
+tinker caddy yourname 45320
+
+# or a custom subdomain
+tinker caddy blog 45320
+tinker caddy api 45321</pre>
+
+  <h2>tinker commands</h2>
+  <pre>tinker port                      reserve a port
+tinker port list                 your reserved ports
+tinker port release &lt;port&gt;       free a port
+
+tinker caddy &lt;subdomain&gt; &lt;port&gt;  go live at subdomain.tharavad.xyz
+tinker caddy list                your active subdomains
+tinker caddy remove &lt;subdomain&gt;  take it offline</pre>
+
+  <hr class="divider">
+
+  <h2>What you get</h2>
+  <ul>
+    <li>Isolated bash shell</li>
+    <li>5 GB disk quota</li>
+    <li>4 GB RAM, 200% CPU limit per user</li>
+    <li>Pre-installed: python, node, go, rust, git, vim, tmux, curl...</li>
+    <li>Public subdomains via <code>tinker caddy</code></li>
+    <li>Ports auto-released after 7 days of inactivity</li>
+  </ul>
+
+  <hr class="divider">
+
+  <h2>Need help?</h2>
+  <p>Open an issue on <a href="https://github.com/tinkerhub0/tharavad">GitHub</a> or find us in the TinkerHub Kerala community.</p>
+
+</div>
+
+<footer>
+  tharavad.xyz &mdash; TinkerHub Kerala
+</footer>
+
+</body>
+</html>
