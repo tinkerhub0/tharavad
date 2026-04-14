@@ -1,0 +1,38 @@
+#!/bin/bash
+# tinker-cleanup — runs nightly via cron
+# Releases ports that haven't been used in 7 days
+# Install: cp tinker-cleanup /etc/cron.daily/tinker-cleanup && chmod 755 /etc/cron.daily/tinker-cleanup
+
+PORTS_FILE="/var/tinker/ports/ports"
+CADDY_DIR="/var/tinker/caddy"
+EXPIRY_DAYS=7
+NOW=$(date +%s)
+EXPIRY_SECS=$((EXPIRY_DAYS * 86400))
+
+[[ -f "$PORTS_FILE" ]] || exit 0
+
+changed=0
+tmpfile=$(mktemp)
+
+while read -r user port timestamp; do
+  age=$((NOW - timestamp))
+  # Check if port is currently in use
+  if ss -tlnp | grep -q ":$port "; then
+    # Port active — update timestamp
+    echo "$user $port $NOW" >> "$tmpfile"
+  elif [[ $age -lt $EXPIRY_SECS ]]; then
+    # Not expired yet — keep
+    echo "$user $port $timestamp" >> "$tmpfile"
+  else
+    # Expired — release
+    echo "Releasing port $port for user $user (inactive for $((age/86400)) days)"
+    rm -f "$CADDY_DIR/${user}-"*.conf
+    changed=1
+  fi
+done < "$PORTS_FILE"
+
+mv "$tmpfile" "$PORTS_FILE"
+
+if [[ $changed -eq 1 ]]; then
+  /usr/bin/caddy reload --config /etc/caddy/Caddyfile 2>/dev/null || true
+fi

@@ -14,12 +14,23 @@ cmd_help() {
   cat << EOF
 tinker — TinkerHub Kerala community server CLI
 
-Commands:
-  tinker port            Reserve a random port for your services
-  tinker port list       Show your reserved ports
-  tinker caddy <port>    Expose port at https://\$(whoami).tharavad.xyz
-  tinker caddy remove    Remove your Caddy entry
-  tinker help            Show this help
+  tinker port                      reserve a random port
+  tinker port list                 show your reserved ports
+  tinker port release <port>       free a port
+
+  tinker caddy <subdomain> <port>  expose port at subdomain.tharavad.xyz
+  tinker caddy list                show your active subdomains
+  tinker caddy remove <subdomain>  take a subdomain offline
+
+  tinker help                      show this help
+
+examples:
+  tinker port                      → 45320
+  tinker caddy blog 45320          → blog.tharavad.xyz
+  tinker caddy api 45321           → api.tharavad.xyz
+  tinker caddy remove blog         → takes blog.tharavad.xyz offline
+
+note: unused ports are auto-released after 7 days of inactivity.
 EOF
 }
 
