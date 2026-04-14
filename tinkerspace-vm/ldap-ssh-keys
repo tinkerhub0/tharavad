@@ -1,0 +1,13 @@
+#!/bin/bash
+# AuthorizedKeysCommand script — looks up sshPublicKey from Authentik LDAP
+# Place at /usr/local/bin/ldap-ssh-keys and chmod 755
+# sshd_config: AuthorizedKeysCommand /usr/local/bin/ldap-ssh-keys %u
+#              AuthorizedKeysCommandUser nobody
+
+ldapsearch -x -LLL -o ldif-wrap=no \
+  -H ldap://10.70.123.10:389 \
+  -D "cn=akadmin,ou=users,dc=ldap,dc=goauthentik,dc=io" \
+  -w "$(grep ldap_default_authtok /etc/sssd/sssd.conf | awk -F= '{print $2}' | tr -d ' ')" \
+  -b "ou=users,dc=ldap,dc=goauthentik,dc=io" \
+  "(cn=$1)" sshPublicKey 2>/dev/null \
+  | grep "^sshPublicKey:" | sed 's/^sshPublicKey: //'
