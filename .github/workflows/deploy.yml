@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths:
+      - www/**
       - index.html
 
 jobs:
@@ -12,11 +13,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Deploy index.html to VPS
+      - name: Deploy www/ to VPS
         uses: appleboy/scp-action@v0.1.7
         with:
           host: 187.127.143.52
           username: root
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: index.html
+          source: "index.html,www/"
           target: /var/www/tharavad/
+          strip_components: 0
