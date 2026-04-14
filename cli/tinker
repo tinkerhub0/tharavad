@@ -70,7 +70,7 @@ cmd_caddy() {
   fi
 
   cat > "$CADDY_DIR/$user.conf" << EOF
-$user.tharavad.xyz {
+http://$user.tharavad.xyz {
   reverse_proxy localhost:$port
 }
 EOF
