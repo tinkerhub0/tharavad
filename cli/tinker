@@ -64,7 +64,7 @@ cmd_port() {
 
   # Find a free port (not already allocated globally, not in use)
   for i in $(seq $PORT_START $PORT_END | shuf); do
-    if ! grep -q " $i$" "$PORTS_DIR/ports" 2>/dev/null && ! ss -tlnp | grep -q ":$i "; then
+    if ! grep -q " $i " "$PORTS_DIR/ports" 2>/dev/null && ! ss -tlnp | grep -q ":$i "; then
       echo "$user $i $(date +%s)" >> "$PORTS_DIR/ports"
       echo "$i"
       return
