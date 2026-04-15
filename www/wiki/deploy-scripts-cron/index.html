@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deploy scripts & cron — tharavad wiki</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0e0e0e; --bg2: #141414; --bg3: #181818;
+    --border: rgba(255,255,255,0.07); --border2: rgba(255,255,255,0.12);
+    --text: #e8e8e8; --muted: #555; --muted2: #999;
+    --green: #3fb950; --yellow: #d29922; --blue: #58a6ff; --red: #f85149; --purple: #bc8cff;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  header { padding: 28px 52px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 10; }
+  .wordmark { font-size: 14px; font-weight: 400; letter-spacing: 0.08em; color: var(--text); text-decoration: none; }
+  nav a { font-size: 12px; color: var(--muted2); text-decoration: none; letter-spacing: 0.06em; margin-left: 28px; }
+  nav a:hover { color: var(--text); }
+
+  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 73px); }
+
+  .sidebar { border-right: 1px solid var(--border); padding: 40px 28px; position: sticky; top: 73px; height: calc(100vh - 73px); overflow-y: auto; }
+  .sidebar-section { margin-bottom: 36px; }
+  .sidebar-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: block; }
+  .sidebar a { display: block; font-size: 13px; color: var(--muted2); text-decoration: none; padding: 5px 0; letter-spacing: 0.02em; transition: color 0.15s; }
+  .sidebar a:hover { color: var(--text); }
+  .sidebar a.active { color: var(--green); }
+
+  .main { padding: 64px 72px 120px; max-width: 860px; }
+
+  .breadcrumb { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 40px; }
+  .breadcrumb a { color: var(--muted); text-decoration: none; }
+  .breadcrumb a:hover { color: var(--muted2); }
+  .breadcrumb span { margin: 0 8px; }
+
+  .page-eyebrow { font-size: 11px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
+  h1 { font-size: 32px; font-weight: 300; letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2; }
+  h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted2); margin: 56px 0 20px; padding-top: 8px; }
+  h3 { font-size: 15px; font-weight: 500; color: var(--text); margin: 32px 0 12px; letter-spacing: -0.01em; }
+  h4 { font-size: 12px; font-weight: 500; color: var(--muted2); letter-spacing: 0.12em; text-transform: uppercase; margin: 24px 0 10px; }
+
+  .lead { font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 17px; line-height: 1.8; color: var(--muted2); margin-bottom: 48px; max-width: 600px; }
+  p { font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 15px; line-height: 1.8; color: var(--muted2); margin-bottom: 18px; max-width: 680px; }
+  p strong { color: var(--text); font-weight: 400; }
+
+  a { color: var(--green); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  pre {
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 20px 24px;
+    font-size: 12.5px;
+    line-height: 1.95;
+    color: var(--text);
+    overflow-x: auto;
+    margin: 14px 0 24px;
+    font-family: 'IBM Plex Mono', monospace;
+    position: relative;
+  }
+  pre .filename {
+    display: block;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 2px; font-size: 12px; color: var(--green); font-family: 'IBM Plex Mono', monospace; }
+
+  /* Syntax colours in pre blocks */
+  .c  { color: var(--muted); }          /* comment */
+  .g  { color: var(--green); }          /* green / keyword */
+  .b  { color: var(--blue); }           /* blue / var */
+  .y  { color: var(--yellow); }         /* yellow / string */
+  .r  { color: var(--red); }            /* red / error */
+  .p  { color: var(--purple); }         /* purple / function */
+  .d  { color: var(--muted2); }         /* dim output */
+
+  /* Callouts */
+  .callout { border: 1px solid rgba(210,153,34,0.3); background: rgba(210,153,34,0.05); border-radius: 3px; padding: 18px 22px; margin: 24px 0; }
+  .callout-title { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--yellow); margin-bottom: 8px; font-weight: 500; }
+  .callout p { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 300; color: var(--muted2); line-height: 1.75; margin: 0; max-width: 100%; }
+  .callout p + p { margin-top: 8px; }
+
+  .info { border: 1px solid rgba(88,166,255,0.25); background: rgba(88,166,255,0.04); border-radius: 3px; padding: 18px 22px; margin: 24px 0; }
+  .info-title { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; font-weight: 500; }
+  .info p { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 300; color: var(--muted2); line-height: 1.75; margin: 0; max-width: 100%; }
+  .info p + p { margin-top: 8px; }
+
+  .success { border: 1px solid rgba(63,185,80,0.25); background: rgba(63,185,80,0.04); border-radius: 3px; padding: 18px 22px; margin: 24px 0; }
+  .success-title { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--green); margin-bottom: 8px; font-weight: 500; }
+  .success p { font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 300; color: var(--muted2); line-height: 1.75; margin: 0; max-width: 100%; }
+
+  /* Explain rows */
+  .explain-block { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; margin: 16px 0 24px; }
+  .explain-row { display: grid; grid-template-columns: 200px 1fr; border-bottom: 1px solid var(--border); }
+  .explain-row:last-child { border-bottom: none; }
+  .explain-key { padding: 14px 18px; color: var(--green); font-size: 12px; background: rgba(255,255,255,0.02); border-right: 1px solid var(--border); font-family: 'IBM Plex Mono', monospace; word-break: break-all; }
+  .explain-val { padding: 14px 18px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 300; color: var(--muted2); line-height: 1.65; }
+  .explain-val strong { color: var(--text); font-weight: 400; }
+
+  /* Cron table */
+  .cron-table { width: 100%; border-collapse: collapse; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin: 16px 0 28px; }
+  .cron-table th { background: rgba(255,255,255,0.03); padding: 12px 18px; text-align: left; font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted); font-weight: 400; border-bottom: 1px solid var(--border); }
+  .cron-table td { padding: 12px 18px; border-bottom: 1px solid var(--border); font-size: 12.5px; vertical-align: top; }
+  .cron-table tr:last-child td { border-bottom: none; }
+  .cron-table td:first-child { color: var(--green); white-space: nowrap; font-family: 'IBM Plex Mono', monospace; }
+  .cron-table td:last-child { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 300; color: var(--muted2); }
+
+  /* Step chain */
+  .step-chain { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; margin: 20px 0 32px; }
+  .step-chain-item { display: grid; grid-template-columns: 52px 1fr; border-bottom: 1px solid var(--border); }
+  .step-chain-item:last-child { border-bottom: none; }
+  .step-chain-num { display: flex; align-items: flex-start; justify-content: center; padding-top: 18px; font-size: 11px; color: var(--muted); border-right: 1px solid var(--border); font-weight: 500; }
+  .step-chain-body { padding: 16px 22px; }
+  .step-chain-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .step-chain-desc { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 300; color: var(--muted2); line-height: 1.6; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 52px 0; }
+
+  .nav-footer { display: flex; justify-content: space-between; margin-top: 72px; padding-top: 32px; border-top: 1px solid var(--border); }
+  .nav-link { font-size: 12px; color: var(--muted2); text-decoration: none; letter-spacing: 0.06em; }
+  .nav-link:hover { color: var(--green); }
+
+  footer { padding: 24px 52px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
+
+  @media (max-width: 768px) {
+    header, footer { padding-left: 20px; padding-right: 20px; }
+    .layout { grid-template-columns: 1fr; }
+    .sidebar { display: none; }
+    .main { padding: 40px 20px 80px; }
+    .explain-row { grid-template-columns: 1fr; }
+    .explain-key { border-right: none; border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="wordmark" href="../index.html">tharavad.xyz</a>
+  <nav>
+    <a href="../index.html">wiki</a>
+    <a href="https://tharavad.xyz">home</a>
+    <a href="https://github.com/tinkerhub0/tharavad">github</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <span class="sidebar-label">Overview</span>
+      <a href="../index.html">Introduction</a>
+      <a href="../getting-started/index.html">Getting started</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Guides</span>
+      <a href="../getting-started/request-access.html">Request access</a>
+      <a href="../getting-started/ssh-keys.html">SSH keys</a>
+      <a href="../getting-started/connecting.html">Connecting via SSH</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Hosting</span>
+      <a href="../hosting/index.html">Hosting a project</a>
+      <a href="../hosting/ports.html">Ports</a>
+      <a href="../hosting/subdomains.html">Subdomains</a>
+      <a href="../hosting/tmux.html">Using tmux</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Auto-deploy</span>
+      <a href="deploy-scripts-cron.html" class="active">Deploy scripts &amp; cron</a>
+      <a href="caddy-auto-deploy.html">Caddy &amp; full pipeline</a>
+    </div>
+    <div class="sidebar-section">
+      <span class="sidebar-label">Reference</span>
+      <a href="../reference/tinker.html">tinker CLI</a>
+      <a href="../reference/environment.html">Environment</a>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="breadcrumb">
+      <a href="../index.html">wiki</a><span>/</span>
+      <a href="#">guides</a><span>/</span>
+      deploy scripts &amp; cron
+    </div>
+
+    <p class="page-eyebrow">subpage — guides / auto-deploy 1 of 2</p>
+    <h1>Deploy scripts &amp; cron</h1>
+    <p class="lead">This guide teaches you how to clone a repo from GitHub, write a shell script that pulls and restarts your app, and schedule that script to run automatically using cron — so your server always stays up to date without you touching it.</p>
+
+    <div class="info">
+      <div class="info-title">Two-page series</div>
+      <p>This is part 1 of 2. It covers git setup, deploy scripts, and cron scheduling. <a href="caddy-auto-deploy.html">Part 2</a> covers how Caddy works as a reverse proxy and wires everything into a complete production-ready auto-deploy pipeline.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <h2>The big picture</h2>
+
+    <p>Before touching a single command, understand what you're trying to build. The goal is a server that <strong>automatically keeps itself up to date</strong> with whatever you push to GitHub. The full chain looks like this:</p>
+
+    <div class="step-chain">
+      <div class="step-chain-item">
+        <div class="step-chain-num">1</div>
+        <div class="step-chain-body">
+          <div class="step-chain-title">You push code to GitHub</div>
+          <div class="step-chain-desc">Your local machine pushes a commit. The new code now lives on GitHub's servers.</div>
+        </div>
+      </div>
+      <div class="step-chain-item">
+        <div class="step-chain-num">2</div>
+        <div class="step-chain-body">
+          <div class="step-chain-title">cron wakes up on a schedule</div>
+          <div class="step-chain-desc">A background scheduler on tharavad runs your deploy script at a fixed interval — say, every 5 minutes.</div>
+        </div>
+      </div>
+      <div class="step-chain-item">
+        <div class="step-chain-num">3</div>
+        <div class="step-chain-body">
+          <div class="step-chain-title">The deploy script runs</div>
+          <div class="step-chain-desc">The script pulls the latest code from GitHub, installs any new dependencies, and restarts the server process.</div>
+        </div>
+      </div>
+      <div class="step-chain-item">
+        <div class="step-chain-num">4</div>
+        <div class="step-chain-body">
+          <div class="step-chain-title">Your site is updated</div>
+          <div class="step-chain-desc">Visitors hitting your subdomain see the new version within minutes of your push. No manual SSH required.</div>
+        </div>
+      </div>
+    </div>
+
+    <p>You'll set this up piece by piece. First git, then the deploy script, then cron.</p>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <h2>Part 1 — Setting up git and cloning your repo</h2>
+
+    <h3>What is git clone?</h3>
+    <p>When you run <code>git clone</code>, git downloads the entire history of a repository from a remote server (GitHub, in this case) onto your local machine — or in this case, your tharavad shell. The result is a folder containing all your files plus a hidden <code>.git/</code> directory that git uses to track changes.</p>
+
+    <h3>SSH access to GitHub from tharavad</h3>
+    <p>You have two options for authenticating to GitHub from tharavad: HTTPS (with a personal access token) or SSH keys. <strong>SSH is strongly recommended</strong> — it doesn't expire, you never type a password, and it's what git was designed for.</p>
+
+    <h4>Generate a key specifically for tharavad → GitHub</h4>
+    <p>You're already on tharavad via SSH. Now you need a <em>separate</em> keypair that lets tharavad authenticate to GitHub. This key lives inside your tharavad shell, not your local machine.</p>
+
+    <pre>
+<span class="c"># Run this while SSHed into tharavad</span>
+<span class="g">ssh-keygen</span> <span class="b">-t ed25519</span> <span class="y">-C "tharavad-deploy"</span> <span class="b">-f ~/.ssh/github</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">ssh-keygen</div>
+        <div class="explain-val">The key generation utility. Generates a matching pair of private + public key files.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">-t ed25519</div>
+        <div class="explain-val">The key type. ed25519 is a modern elliptic curve algorithm — short, fast, and secure.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">-C "tharavad-deploy"</div>
+        <div class="explain-val">A human-readable comment (<code>-C</code>) to label this key. Helps you identify it later in GitHub's key list.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">-f ~/.ssh/github</div>
+        <div class="explain-val">The output file path. This creates <code>~/.ssh/github</code> (private key) and <code>~/.ssh/github.pub</code> (public key) — separate from your main tharavad key so they don't conflict.</div>
+      </div>
+    </div>
+
+    <p>When prompted for a passphrase, <strong>press Enter twice to skip it</strong>. A passphrase would require you to type it every time — which would break unattended scripts running via cron.</p>
+
+    <h4>Add the public key to GitHub</h4>
+    <pre>
+<span class="c"># Print your new public key</span>
+<span class="g">cat</span> ~/.ssh/github.pub</pre>
+
+    <p>Copy the entire output. Then in GitHub: <strong>Settings → SSH and GPG keys → New SSH key</strong>. Give it a title like "tharavad server" and paste the key. Click Add SSH key.</p>
+
+    <h4>Tell SSH which key to use for GitHub</h4>
+    <p>Create or edit <code>~/.ssh/config</code> to configure SSH to automatically use your <code>github</code> key whenever it connects to <code>github.com</code>:</p>
+
+    <pre>
+<span class="filename">~/.ssh/config</span>
+<span class="b">Host</span> github.com
+    <span class="b">HostName</span>  github.com
+    <span class="b">User</span>      git
+    <span class="b">IdentityFile</span> ~/.ssh/github
+    <span class="b">IdentitiesOnly</span> yes</pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">Host github.com</div>
+        <div class="explain-val">This block applies any time SSH connects to the hostname <code>github.com</code>.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">User git</div>
+        <div class="explain-val">GitHub's SSH server requires the username <code>git</code> for all connections regardless of your GitHub username. This is correct — don't change it.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">IdentityFile ~/.ssh/github</div>
+        <div class="explain-val">Tells SSH to authenticate using your <code>~/.ssh/github</code> private key for this host.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">IdentitiesOnly yes</div>
+        <div class="explain-val">Forces SSH to <em>only</em> try the specified key. Without this, SSH might try other keys first and confuse GitHub's server.</div>
+      </div>
+    </div>
+
+    <h4>Test the connection</h4>
+    <pre>
+<span class="g">ssh</span> <span class="b">-T</span> git@github.com</pre>
+
+    <p>You should see: <code>Hi yourusername! You've successfully authenticated, but GitHub does not provide shell access.</code></p>
+    <p>That message is normal and correct. It confirms the key works. GitHub doesn't give you a shell — it only accepts git operations.</p>
+
+    <h3>Cloning your repository</h3>
+
+    <p>Navigate to your home directory and clone your repo using the SSH URL (not the HTTPS one):</p>
+
+    <pre>
+<span class="c"># Go home first</span>
+<span class="g">cd</span> ~
+
+<span class="c"># Clone with SSH (find this URL on GitHub → Code → SSH tab)</span>
+<span class="g">git clone</span> git@github.com:yourusername/yourrepo.git
+
+<span class="c"># The repo is now at ~/yourrepo/</span>
+<span class="g">cd</span> yourrepo
+<span class="g">ls</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">git clone</div>
+        <div class="explain-val">Downloads the full repository — all files, all branches, all commit history — into a new folder in your current directory.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">git@github.com:</div>
+        <div class="explain-val">The SSH address of GitHub. <code>git</code> is the username (always), <code>github.com</code> is the host.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">yourusername/yourrepo.git</div>
+        <div class="explain-val">Your GitHub username and repository name. The <code>.git</code> suffix is conventional — git understands it either way.</div>
+      </div>
+    </div>
+
+    <h3>Understanding git pull</h3>
+    <p><code>git pull</code> is the command you'll use in your deploy script. It fetches the latest commits from GitHub and merges them into your current branch. Think of it as "download whatever changed since I last synced."</p>
+
+    <pre>
+<span class="c"># Inside your repo directory</span>
+<span class="g">cd</span> ~/yourrepo
+<span class="g">git pull</span>
+
+<span class="c"># Output when there are new commits:</span>
+<span class="d">remote: Enumerating objects: 5, done.</span>
+<span class="d">remote: Counting objects: 100% (5/5), done.</span>
+<span class="d">Updating a1b2c3d..e4f5g6h</span>
+<span class="d">Fast-forward</span>
+<span class="d"> index.html | 4 ++--</span>
+<span class="d"> 1 file changed, 2 insertions(+), 2 deletions(-)</span>
+
+<span class="c"># Output when already up to date:</span>
+<span class="d">Already up to date.</span></pre>
+
+    <div class="callout">
+      <div class="callout-title">Important: always pull from the right branch</div>
+      <p>By default, <code>git pull</code> pulls the branch you're currently on. Make sure your deploy script explicitly checks out the right branch (usually <code>main</code> or <code>master</code>) so you're always pulling the correct code.</p>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <h2>Part 2 — Writing a deploy script</h2>
+
+    <h3>What is a shell script?</h3>
+    <p>A shell script is a plain text file containing a sequence of shell commands. When you run the file, the shell reads it top to bottom and executes each command in order — exactly as if you had typed them yourself. Scripts let you bundle many steps into a single command.</p>
+
+    <h3>The shebang line</h3>
+    <p>Every shell script begins with a <strong>shebang</strong> — a special comment on line 1 that tells the OS which interpreter to use:</p>
+
+    <pre>
+<span class="g">#!/bin/bash</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">#!</div>
+        <div class="explain-val">Called "shebang" (or "hashbang"). When the OS sees this as the first two bytes of a file, it knows the rest of the line is the path to the interpreter.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">/bin/bash</div>
+        <div class="explain-val">The absolute path to the bash executable. This ensures the script runs with bash regardless of which shell the user is currently using.</div>
+      </div>
+    </div>
+
+    <h3>set -e and set -o pipefail</h3>
+    <p>Add these two lines near the top of every deploy script. They make the script <strong>stop immediately if anything goes wrong</strong> — which is critical in a deploy context. Without them, a failed <code>git pull</code> might be silently ignored and your script would continue trying to restart a server with stale code.</p>
+
+    <pre>
+<span class="g">set</span> <span class="b">-e</span>          <span class="c"># exit immediately if any command fails</span>
+<span class="g">set</span> <span class="b">-o pipefail</span> <span class="c"># catch failures inside pipelines (cmd1 | cmd2)</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">set -e</div>
+        <div class="explain-val">Enables "exit on error" mode. If any command returns a non-zero exit code (which means failure), the script stops immediately. Without this, bash just logs the error and keeps going.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">set -o pipefail</div>
+        <div class="explain-val">Extends the exit-on-error rule to pipelines. Normally, the exit code of <code>cmd1 | cmd2</code> is only the exit code of <code>cmd2</code>. With <code>pipefail</code>, if <code>cmd1</code> fails, the whole pipeline fails.</div>
+      </div>
+    </div>
+
+    <h3>Variables in bash</h3>
+    <p>Use variables to avoid repeating paths throughout your script. Declare them in UPPER_CASE by convention:</p>
+
+    <pre>
+<span class="c"># Define once at the top</span>
+<span class="b">APP_DIR</span>=<span class="y">"$HOME/yourrepo"</span>
+<span class="b">PORT</span>=<span class="y">45320</span>
+
+<span class="c"># Use with $ prefix</span>
+<span class="g">cd</span> <span class="y">"$APP_DIR"</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">VARNAME=value</div>
+        <div class="explain-val">Assignment. No spaces around the <code>=</code> sign — bash will error if you add spaces.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">$VARNAME or "${VARNAME}"</div>
+        <div class="explain-val">Variable expansion. The <code>$</code> tells bash to substitute the variable's value. Use double quotes around it to handle paths with spaces safely.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">$HOME</div>
+        <div class="explain-val">A built-in environment variable set by the OS to your home directory path (e.g. <code>/home/jake</code>). More reliable than hardcoding the path.</div>
+      </div>
+    </div>
+
+    <h3>Killing and restarting a process</h3>
+    <p>When you deploy new code, you need to stop the old server and start a new one. This is where most beginners get tripped up — how do you kill a process you started earlier?</p>
+
+    <p>The pattern is: <strong>save the process ID (PID) when you start the server, then use that PID to kill it later</strong>.</p>
+
+    <pre>
+<span class="c"># Start a process and save its PID to a file</span>
+<span class="g">python3 -m http.server</span> <span class="y">$PORT</span> &amp;
+<span class="g">echo</span> <span class="y">$!</span> &gt; /tmp/myapp.pid
+
+<span class="c"># $! is a special variable — it holds the PID of the last</span>
+<span class="c"># background process that was started</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">&amp; (ampersand)</div>
+        <div class="explain-val">Runs the command in the <strong>background</strong>. Without it, the command would block the script forever (the server runs until killed). The <code>&amp;</code> tells bash to start it and immediately move on to the next line.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">$!</div>
+        <div class="explain-val">A special bash variable that contains the Process ID (PID) of the most recently started background process. PID is a number the OS assigns to every running process.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">echo $! &gt; /tmp/myapp.pid</div>
+        <div class="explain-val">Writes the PID to a file. <code>&gt;</code> redirects the output of <code>echo</code> into the file, overwriting it. <code>/tmp/</code> is a good place for temporary runtime files.</div>
+      </div>
+    </div>
+
+    <p>To kill the process on the next deploy:</p>
+
+    <pre>
+<span class="c"># Check if the PID file exists</span>
+<span class="g">if</span> [ <span class="b">-f</span> /tmp/myapp.pid ]; <span class="g">then</span>
+    <span class="b">OLD_PID</span>=<span class="y">$(cat /tmp/myapp.pid)</span>
+    <span class="c"># Check if a process with that PID is actually running</span>
+    <span class="g">if</span> <span class="g">kill</span> <span class="b">-0</span> <span class="y">"$OLD_PID"</span> 2&gt;/dev/null; <span class="g">then</span>
+        <span class="g">kill</span> <span class="y">"$OLD_PID"</span>
+        <span class="g">sleep</span> 1   <span class="c"># give it a moment to clean up</span>
+    <span class="g">fi</span>
+<span class="g">fi</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">if [ -f file ]</div>
+        <div class="explain-val"><code>-f</code> tests whether the path is a regular file that exists. The whole <code>[ ... ]</code> block is a test expression. If true, the <code>then</code> block runs.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">$(cat /tmp/myapp.pid)</div>
+        <div class="explain-val">Command substitution. The <code>$(...)</code> runs the command inside and substitutes its output as a value. Here it reads the PID number out of the file.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">kill -0 "$PID"</div>
+        <div class="explain-val"><code>kill -0</code> sends "signal 0" — which doesn't actually kill anything. It just checks whether the process is still running. Returns exit code 0 (success) if it is, non-zero if it isn't. Used purely for checking.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">2&gt;/dev/null</div>
+        <div class="explain-val">Redirects "stderr" (file descriptor 2, used for error messages) to <code>/dev/null</code> — a special file that discards anything written to it. This silences the "No such process" error if the PID doesn't exist.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">kill "$PID"</div>
+        <div class="explain-val">Sends SIGTERM (signal 15) to the process — a polite "please stop" signal that gives the process a chance to clean up before exiting.</div>
+      </div>
+    </div>
+
+    <h3>The complete deploy script</h3>
+    <p>Putting it all together. This script covers the full cycle: pull new code, install dependencies, kill the old server, start the new one.</p>
+
+    <pre>
+<span class="filename">~/deploy.sh</span><span class="g">#!/bin/bash</span>
+<span class="g">set</span> <span class="b">-e</span>
+<span class="g">set</span> <span class="b">-o pipefail</span>
+
+<span class="c"># ── Config ─────────────────────────────────────────────────</span>
+<span class="b">APP_DIR</span>=<span class="y">"$HOME/yourrepo"</span>
+<span class="b">PORT</span>=<span class="y">45320</span>
+<span class="b">PID_FILE</span>=<span class="y">"/tmp/myapp.pid"</span>
+<span class="b">LOG_FILE</span>=<span class="y">"$HOME/deploy.log"</span>
+<span class="b">APP_LOG</span>=<span class="y">"$HOME/app.log"</span>
+
+<span class="c"># ── Logging ────────────────────────────────────────────────</span>
+<span class="p">log</span>() {
+    <span class="g">echo</span> <span class="y">"[$(date '+%Y-%m-%d %H:%M:%S')] $*"</span> | <span class="g">tee</span> <span class="b">-a</span> <span class="y">"$LOG_FILE"</span>
+}
+
+<span class="p">log</span> <span class="y">"Deploy started"</span>
+
+<span class="c"># ── Pull latest code ───────────────────────────────────────</span>
+<span class="p">log</span> <span class="y">"Pulling latest code from GitHub..."</span>
+<span class="g">cd</span> <span class="y">"$APP_DIR"</span>
+<span class="g">git fetch origin</span>
+<span class="g">git reset</span> <span class="b">--hard</span> origin/main
+<span class="p">log</span> <span class="y">"Now at commit: $(git rev-parse --short HEAD)"</span>
+
+<span class="c"># ── Install dependencies (if needed) ──────────────────────</span>
+<span class="c"># Uncomment whichever applies to your project:</span>
+<span class="c"># npm install --production</span>
+<span class="c"># pip install -r requirements.txt --user</span>
+
+<span class="c"># ── Stop old server ────────────────────────────────────────</span>
+<span class="p">log</span> <span class="y">"Stopping old server..."</span>
+<span class="g">if</span> [ <span class="b">-f</span> <span class="y">"$PID_FILE"</span> ]; <span class="g">then</span>
+    <span class="b">OLD_PID</span>=<span class="y">$(cat "$PID_FILE")</span>
+    <span class="g">if</span> <span class="g">kill</span> <span class="b">-0</span> <span class="y">"$OLD_PID"</span> 2&gt;/dev/null; <span class="g">then</span>
+        <span class="g">kill</span> <span class="y">"$OLD_PID"</span>
+        <span class="g">sleep</span> 1
+        <span class="p">log</span> <span class="y">"Killed PID $OLD_PID"</span>
+    <span class="g">else</span>
+        <span class="p">log</span> <span class="y">"PID $OLD_PID was not running (already stopped)"</span>
+    <span class="g">fi</span>
+    <span class="g">rm</span> <span class="b">-f</span> <span class="y">"$PID_FILE"</span>
+<span class="g">fi</span>
+
+<span class="c"># ── Start new server ───────────────────────────────────────</span>
+<span class="p">log</span> <span class="y">"Starting server on port $PORT..."</span>
+<span class="g">cd</span> <span class="y">"$APP_DIR"</span>
+
+<span class="c"># For a static site:</span>
+<span class="g">python3 -m http.server</span> <span class="y">$PORT</span> &gt;&gt;<span class="y">"$APP_LOG"</span> 2&gt;&amp;1 &amp;
+
+<span class="c"># For a Node app (uncomment and replace above):</span>
+<span class="c"># node server.js &gt;&gt;"$APP_LOG" 2&gt;&amp;1 &amp;</span>
+
+<span class="g">echo</span> <span class="y">$!</span> &gt; <span class="y">"$PID_FILE"</span>
+<span class="p">log</span> <span class="y">"Server started with PID $(cat $PID_FILE)"</span>
+<span class="p">log</span> <span class="y">"Deploy complete. Running at port $PORT"</span></pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">git fetch origin</div>
+        <div class="explain-val">Downloads all new commits from the remote (GitHub) without applying them yet. <code>origin</code> is the default name git gives to the remote you cloned from.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">git reset --hard origin/main</div>
+        <div class="explain-val">Forces your local branch to exactly match <code>origin/main</code>. This is safer than <code>git pull</code> in automated scripts — it discards any accidental local changes and guarantees you match GitHub exactly. <code>--hard</code> means "move the branch pointer AND update all files to match."</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">git rev-parse --short HEAD</div>
+        <div class="explain-val">Prints the short (7-character) hash of the current commit. Useful in logs to confirm exactly which version is deployed.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">tee -a "$LOG_FILE"</div>
+        <div class="explain-val"><code>tee</code> reads from stdin and writes to both stdout AND a file simultaneously. The <code>-a</code> flag appends to the file instead of overwriting. So <code>echo "message" | tee -a file</code> prints to the terminal and logs to the file at the same time.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">&gt;&gt;"$APP_LOG" 2&gt;&amp;1</div>
+        <div class="explain-val"><code>&gt;&gt;</code> appends stdout to the log file. <code>2&gt;&amp;1</code> redirects stderr (file descriptor 2) to wherever stdout (file descriptor 1) is going — meaning both regular output and errors end up in the same log file.</div>
+      </div>
+    </div>
+
+    <h3>Making the script executable</h3>
+    <p>A file has to be marked executable before you can run it as a command. Use <code>chmod</code>:</p>
+
+    <pre>
+<span class="g">chmod</span> <span class="b">+x</span> ~/deploy.sh</pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">chmod</div>
+        <div class="explain-val">Change file mode (permissions). Every file on Linux has read/write/execute permissions for the owner, group, and others.</div>
+      </div>
+      <div class="explain-row">
+        <div class="explain-key">+x</div>
+        <div class="explain-val">Adds the execute bit for all users. After this, you can run the file directly with <code>./deploy.sh</code> or just <code>~/deploy.sh</code>.</div>
+      </div>
+    </div>
+
+    <p>Test it manually first before setting up cron:</p>
+    <pre>
+<span class="g">bash</span> ~/deploy.sh</pre>
+
+    <p>Watch the output. If anything fails, fix it before automating. Check the log file for details:</p>
+    <pre>
+<span class="g">cat</span> ~/deploy.log</pre>
+
+    <!-- ═══════════════════════════════════════════════════ -->
+    <h2>Part 3 — Scheduling with cron</h2>
+
+    <h3>What is cron?</h3>
+    <p>cron is a time-based job scheduler built into every Linux system. It runs in the background as a daemon (a background system process) and wakes up every minute to check if any scheduled jobs need to run. If they do, it runs them. You define the schedule in a file called the <strong>crontab</strong> (cron table).</p>
+
+    <p>cron is the backbone of automation on Linux servers. You use it to run backups, send reports, rotate log files, and — as we're doing here — automatically deploy updated code.</p>
+
+    <h3>The crontab file</h3>
+    <p>Each user has their own crontab. Edit yours with:</p>
+
+    <pre>
+<span class="g">crontab</span> <span class="b">-e</span></pre>
+
+    <p>This opens the crontab in your default editor (usually <code>nano</code> or <code>vi</code>). Each line in the crontab defines one scheduled job in this format:</p>
+
+    <pre>
+<span class="c"># ┌─────── minute       (0–59)</span>
+<span class="c"># │ ┌───── hour         (0–23)</span>
+<span class="c"># │ │ ┌─── day of month (1–31)</span>
+<span class="c"># │ │ │ ┌─ month        (1–12)</span>
+<span class="c"># │ │ │ │ ┌ day of week  (0–7, 0 and 7 are Sunday)</span>
+<span class="c"># │ │ │ │ │</span>
+  <span class="b">*</span> <span class="b">*</span> <span class="b">*</span> <span class="b">*</span> <span class="b">*</span>  <span class="g">command to run</span></pre>
+
+    <h3>The fields in detail</h3>
+
+    <table class="cron-table">
+      <thead><tr><th>Field</th><th>Range</th><th>Special values</th></tr></thead>
+      <tbody>
+        <tr><td>minute</td><td>0–59</td><td><code>*</code> = every minute, <code>*/5</code> = every 5 min, <code>0,30</code> = at 0 and 30</td></tr>
+        <tr><td>hour</td><td>0–23</td><td><code>*</code> = every hour, <code>2</code> = at 2am, <code>*/6</code> = every 6 hours</td></tr>
+        <tr><td>day of month</td><td>1–31</td><td><code>*</code> = every day, <code>1</code> = 1st of month, <code>15</code> = 15th</td></tr>
+        <tr><td>month</td><td>1–12</td><td><code>*</code> = every month, <code>1</code> = January</td></tr>
+        <tr><td>day of week</td><td>0–7</td><td><code>*</code> = every day, <code>1</code> = Monday, <code>0</code> or <code>7</code> = Sunday</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Common schedule examples</h3>
+
+    <table class="cron-table">
+      <thead><tr><th>Expression</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>* * * * *</td><td>Every minute</td></tr>
+        <tr><td>*/5 * * * *</td><td>Every 5 minutes</td></tr>
+        <tr><td>*/10 * * * *</td><td>Every 10 minutes</td></tr>
+        <tr><td>0 * * * *</td><td>Every hour, on the hour</td></tr>
+        <tr><td>0 2 * * *</td><td>Every day at 2:00am</td></tr>
+        <tr><td>0 0 * * 1</td><td>Every Monday at midnight</td></tr>
+        <tr><td>30 6 * * 1-5</td><td>Mon–Fri at 6:30am</td></tr>
+        <tr><td>0 */6 * * *</td><td>Every 6 hours</td></tr>
+      </tbody>
+    </table>
+
+    <h3>The PATH problem — the most common cron pitfall</h3>
+    <p>This is where almost everyone gets stuck the first time. Your deploy script works perfectly when you run it manually, but fails silently when cron runs it. The reason: <strong>cron runs in a minimal environment with a very limited PATH</strong>.</p>
+
+    <p>When you type commands in your shell, bash knows where to find programs like <code>git</code>, <code>node</code>, <code>python3</code> because your <code>$PATH</code> lists many directories. Cron's PATH is typically just <code>/usr/bin:/bin</code> — it won't find things installed in <code>/usr/local/bin</code>, <code>~/.local/bin</code>, or anywhere else.</p>
+
+    <p>The fix: set PATH explicitly at the top of your crontab, or use full absolute paths in your script.</p>
+
+    <pre>
+<span class="c"># Set PATH at the top of your crontab (add this as first line)</span>
+<span class="b">PATH</span>=<span class="y">/usr/local/bin:/usr/bin:/bin:/home/jake/.local/bin</span>
+<span class="b">HOME</span>=<span class="y">/home/jake</span>
+
+<span class="c"># Then your job:</span>
+<span class="b">*/5 * * * *</span>  /home/jake/deploy.sh &gt;&gt; /home/jake/cron.log 2&gt;&amp;1</pre>
+
+    <div class="callout">
+      <div class="callout-title">Always use absolute paths in cron</div>
+      <p>Never write <code>~/deploy.sh</code> in a crontab — the <code>~</code> shorthand may not expand correctly. Always use the full path: <code>/home/jake/deploy.sh</code>. Run <code>echo $HOME</code> in your shell to find your exact home directory path.</p>
+    </div>
+
+    <h3>Capturing cron output in a log</h3>
+    <p>By default, cron discards all output (unless mail is configured, which it isn't on tharavad). You'll have no idea if jobs succeeded or failed unless you redirect output to a file yourself.</p>
+
+    <pre>
+<span class="c"># Append both stdout and stderr to a log file</span>
+<span class="b">*/5 * * * *</span>  /home/jake/deploy.sh <span class="b">&gt;&gt;</span> /home/jake/cron.log <span class="b">2&gt;&amp;1</span>
+
+<span class="c"># Check the log anytime</span>
+<span class="g">tail</span> <span class="b">-f</span> ~/cron.log</pre>
+
+    <div class="explain-block">
+      <div class="explain-row">
+        <div class="explain-key">tail -f ~/cron.log</div>
+        <div class="explain-val"><code>tail</code> prints the last lines of a file. <code>-f</code> means "follow" — it keeps the file open and prints new lines as they're added in real time. Use this to watch your cron job run live. Press Ctrl+C to stop.</div>
+      </div>
+    </div>
+
+    <h3>Setting up the cron job</h3>
+    <pre>
+<span class="c"># Open your crontab for editing</span>
+<span class="g">crontab</span> <span class="b">-e</span></pre>
+
+    <p>Add these lines (replace <code>jake</code> with your username, found by running <code>whoami</code>):</p>
+
+    <pre>
+<span class="filename">crontab</span><span class="b">PATH</span>=<span class="y">/usr/local/bin:/usr/bin:/bin:/home/jake/.local/bin</span>
+<span class="b">HOME</span>=<span class="y">/home/jake</span>
+
+<span class="c"># Pull and redeploy every 5 minutes</span>
+<span class="b">*/5 * * * *</span>  /home/jake/deploy.sh &gt;&gt; /home/jake/cron.log 2&gt;&amp;1</pre>
+
+    <p>Save and exit. Verify it was saved:</p>
+    <pre>
+<span class="g">crontab</span> <span class="b">-l</span>     <span class="c"># list current crontab</span></pre>
+
+    <h3>Verifying cron is running your job</h3>
+    <p>Wait a few minutes, then check the log:</p>
+    <pre>
+<span class="g">cat</span> ~/cron.log</pre>
+
+    <p>You should see timestamped lines from your deploy script's <code>log()</code> function. If the file is empty or doesn't exist, the job hasn't run yet — wait a full 5 minutes and check again.</p>
+
+    <div class="success">
+      <div class="success-title">What good output looks like</div>
+      <p>[2025-04-10 14:35:01] Deploy started<br>
+         [2025-04-10 14:35:01] Pulling latest code from GitHub...<br>
+         [2025-04-10 14:35:02] Now at commit: a1b2c3d<br>
+         [2025-04-10 14:35:02] Stopping old server...<br>
+         [2025-04-10 14:35:03] Killed PID 12345<br>
+         [2025-04-10 14:35:03] Starting server on port 45320...<br>
+         [2025-04-10 14:35:03] Server started with PID 12398<br>
+         [2025-04-10 14:35:03] Deploy complete. Running at port 45320</p>
+    </div>
+
+    <h3>Only redeploy when there are new commits</h3>
+    <p>Running the full stop/start cycle every 5 minutes even when nothing changed causes unnecessary downtime. You can make the script smarter — only restart if <code>git pull</code> actually fetched new commits:</p>
+
+    <pre>
+<span class="c"># Get the current commit hash before pulling</span>
+<span class="b">BEFORE</span>=<span class="y">$(git rev-parse HEAD)</span>
+
+<span class="c"># Fetch and reset</span>
+<span class="g">git fetch origin</span>
+<span class="g">git reset</span> <span class="b">--hard</span> origin/main
+
+<span class="c"># Get the commit hash after pulling</span>
+<span class="b">AFTER</span>=<span class="y">$(git rev-parse HEAD)</span>
+
+<span class="c"># Only restart if something changed</span>
+<span class="g">if</span> [ <span class="y">"$BEFORE"</span> = <span class="y">"$AFTER"</span> ]; <span class="g">then</span>
+    <span class="p">log</span> <span class="y">"No changes. Skipping restart."</span>
+    <span class="g">exit</span> 0
+<span class="g">fi</span>
+
+<span class="p">log</span> <span class="y">"New commit detected: $BEFORE → $AFTER. Restarting..."</span>
+<span class="c"># ... rest of deploy continues</span></pre>
+
+    <div class="divider"></div>
+
+    <h2>Putting it all together</h2>
+    <p>Here is the final production-ready deploy script with the "only restart on change" optimisation included:</p>
+
+    <pre>
+<span class="filename">~/deploy.sh</span><span class="g">#!/bin/bash</span>
+<span class="g">set</span> <span class="b">-e</span>
+<span class="g">set</span> <span class="b">-o pipefail</span>
+
+<span class="b">APP_DIR</span>=<span class="y">"$HOME/yourrepo"</span>
+<span class="b">PORT</span>=<span class="y">45320</span>
+<span class="b">PID_FILE</span>=<span class="y">"/tmp/myapp.pid"</span>
+<span class="b">LOG_FILE</span>=<span class="y">"$HOME/deploy.log"</span>
+<span class="b">APP_LOG</span>=<span class="y">"$HOME/app.log"</span>
+
+<span class="p">log</span>() { <span class="g">echo</span> <span class="y">"[$(date '+%Y-%m-%d %H:%M:%S')] $*"</span> | <span class="g">tee</span> <span class="b">-a</span> <span class="y">"$LOG_FILE"</span>; }
+
+<span class="p">log</span> <span class="y">"── Checking for updates ──────────────────────"</span>
+<span class="g">cd</span> <span class="y">"$APP_DIR"</span>
+
+<span class="b">BEFORE</span>=<span class="y">$(git rev-parse HEAD)</span>
+<span class="g">git fetch origin</span>
+<span class="g">git reset</span> <span class="b">--hard</span> origin/main
+<span class="b">AFTER</span>=<span class="y">$(git rev-parse HEAD)</span>
+
+<span class="g">if</span> [ <span class="y">"$BEFORE"</span> = <span class="y">"$AFTER"</span> ]; <span class="g">then</span>
+    <span class="p">log</span> <span class="y">"Already up to date ($(git rev-parse --short HEAD)). Nothing to do."</span>
+    <span class="g">exit</span> 0
+<span class="g">fi</span>
+
+<span class="p">log</span> <span class="y">"New code detected. Deploying $(git rev-parse --short HEAD)..."</span>
+
+<span class="c"># Install deps — uncomment what applies:</span>
+<span class="c"># npm install --production --silent</span>
+<span class="c"># pip install -r requirements.txt --user -q</span>
+
+<span class="g">if</span> [ <span class="b">-f</span> <span class="y">"$PID_FILE"</span> ]; <span class="g">then</span>
+    <span class="b">OLD_PID</span>=<span class="y">$(cat "$PID_FILE")</span>
+    <span class="g">if</span> <span class="g">kill</span> <span class="b">-0</span> <span class="y">"$OLD_PID"</span> 2&gt;/dev/null; <span class="g">then</span>
+        <span class="g">kill</span> <span class="y">"$OLD_PID"</span> &amp;&amp; <span class="g">sleep</span> 1
+        <span class="p">log</span> <span class="y">"Stopped old server (PID $OLD_PID)"</span>
+    <span class="g">fi</span>
+    <span class="g">rm</span> <span class="b">-f</span> <span class="y">"$PID_FILE"</span>
+<span class="g">fi</span>
+
+<span class="g">python3 -m http.server</span> <span class="y">$PORT</span> &gt;&gt;<span class="y">"$APP_LOG"</span> 2&gt;&amp;1 &amp;
+<span class="g">echo</span> <span class="y">$!</span> &gt; <span class="y">"$PID_FILE"</span>
+<span class="p">log</span> <span class="y">"Server started on port $PORT (PID $(cat $PID_FILE))"</span>
+<span class="p">log</span> <span class="y">"── Deploy complete ───────────────────────────"</span></pre>
+
+    <div class="nav-footer">
+      <span></span>
+      <a class="nav-link" href="caddy-auto-deploy.html">Next: Caddy &amp; full pipeline →</a>
+    </div>
+  </main>
+</div>
+
+<footer>
+  <a href="https://tharavad.xyz" style="color:inherit;text-decoration:none;">tharavad.xyz</a> &mdash; TinkerHub Kerala
+</footer>
+</body>
+</html>
