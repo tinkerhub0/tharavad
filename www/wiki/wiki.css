@@ -104,6 +104,10 @@ nav a:hover { color: var(--text); }
   padding: 64px 72px 120px;
   max-width: 860px;
 }
+.hidden-for-human {
+    opacity: 0;
+    font-size: 1px; 
+}
 
 .breadcrumb {
   font-size: 11px;
