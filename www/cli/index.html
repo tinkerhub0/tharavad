@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Try it — tharavad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0e0e;
+    --bg2: #141414;
+    --bg3: #1a1a1a;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,255,255,0.12);
+    --text: #e8e8e8;
+    --muted: #555;
+    --muted2: #888;
+    --green: #3fb950;
+    --green-dim: rgba(63,185,80,0.15);
+    --green-glow: rgba(63,185,80,0.06);
+    --yellow: #e3b341;
+    --blue: #58a6ff;
+    --red: #f85149;
+    --cursor: #3fb950;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    padding: 28px 52px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .wordmark { font-size: 14px; font-weight: 400; letter-spacing: 0.08em; color: var(--text); text-decoration: none; }
+  nav a { font-size: 12px; color: var(--muted2); text-decoration: none; letter-spacing: 0.06em; margin-left: 28px; }
+  nav a:hover { color: var(--text); }
+
+  /* PAGE LAYOUT */
+  .page {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 480px;
+    gap: 0;
+    min-height: calc(100vh - 73px);
+  }
+
+  /* LEFT — intro */
+  .intro {
+    padding: 72px 64px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .eyebrow {
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .eyebrow::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--green);
+    opacity: 0.5;
+  }
+
+  h1 {
+    font-size: 38px;
+    font-weight: 300;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+  h1 em { font-style: normal; color: var(--green); }
+
+  .intro-desc {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    line-height: 1.8;
+    color: var(--muted2);
+    margin-bottom: 48px;
+    max-width: 420px;
+  }
+
+  .hint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hint {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--muted2);
+    cursor: pointer;
+    padding: 10px 16px;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    background: transparent;
+    width: fit-content;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .hint:hover {
+    border-color: rgba(63,185,80,0.35);
+    background: var(--green-glow);
+    color: var(--green);
+  }
+  .hint code {
+    color: var(--green);
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .hint:hover code { color: inherit; }
+  .hint-arrow { color: var(--muted); font-size: 10px; margin-left: 4px; }
+
+  .hint-label {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    margin-top: 4px;
+  }
+
+  /* RIGHT — terminal */
+  .terminal-pane {
+    display: flex;
+    flex-direction: column;
+    background: var(--bg2);
+  }
+
+  .terminal-bar {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .dots { display: flex; gap: 7px; }
+  .dot {
+    width: 11px; height: 11px; border-radius: 50%;
+  }
+  .dot-red   { background: #ff5f57; }
+  .dot-yellow{ background: #febc2e; }
+  .dot-green { background: #28c840; }
+
+  .terminal-title {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    flex: 1;
+    text-align: center;
+    margin-right: 54px; /* optical balance with dots */
+  }
+
+  .terminal-body {
+    flex: 1;
+    padding: 24px 28px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.75;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-height: 0;
+  }
+
+  .terminal-body::-webkit-scrollbar { width: 4px; }
+  .terminal-body::-webkit-scrollbar-track { background: transparent; }
+  .terminal-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* Output lines */
+  .line { display: block; white-space: pre-wrap; word-break: break-word; min-height: 1.75em; }
+  .line-blank { min-height: 1.75em; display: block; }
+  .line-prompt { color: var(--text); }
+  .line-prompt .ps1-user { color: var(--green); }
+  .line-prompt .ps1-host { color: var(--green); opacity: 0.6; }
+  .line-prompt .ps1-path { color: var(--blue); }
+  .line-prompt .ps1-sym  { color: var(--muted2); }
+  .line-output  { color: var(--muted2); }
+  .line-success { color: var(--green); }
+  .line-error   { color: var(--red); }
+  .line-info    { color: var(--blue); }
+  .line-yellow  { color: var(--yellow); }
+  .line-dim     { color: var(--muted); }
+  .line-banner  { color: var(--green); }
+
+  /* Input row */
+  .input-row {
+    display: flex;
+    align-items: center;
+    padding: 14px 28px 20px;
+    border-top: 1px solid var(--border);
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .ps1 { font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+  .ps1 .ps1-user { color: var(--green); }
+  .ps1 .ps1-host { color: var(--green); opacity: 0.6; }
+  .ps1 .ps1-path { color: var(--blue); }
+  .ps1 .ps1-sym  { color: var(--muted2); margin-right: 6px; }
+
+  #cmd-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    caret-color: var(--cursor);
+  }
+
+  /* animated cursor blink */
+  #cmd-input::placeholder { color: var(--muted); }
+
+  .clear-btn {
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 2px;
+    font-family: 'IBM Plex Mono', monospace;
+    transition: color 0.15s;
+  }
+  .clear-btn:hover { color: var(--muted2); }
+
+  /* Typing animation */
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+  footer {
+    padding: 20px 52px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+
+  @media (max-width: 900px) {
+    header, footer { padding-left: 20px; padding-right: 20px; }
+    .page { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+    .intro { padding: 40px 24px; border-right: none; border-bottom: 1px solid var(--border); justify-content: flex-start; }
+    .intro-desc { max-width: 100%; }
+    .terminal-pane { min-height: 520px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="wordmark" href="index.html">tharavad.xyz</a>
+  <nav>
+    <a href="index.html">wiki</a>
+    <a href="https://tharavad.xyz">home</a>
+    <a href="https://github.com/tinkerhub0/tharavad">github</a>
+  </nav>
+</header>
+
+<div class="page">
+
+  <!-- LEFT -->
+  <div class="intro">
+    <div class="eyebrow">interactive demo</div>
+    <h1>Try tharavad<br>in your <em>browser</em></h1>
+    <p class="intro-desc">
+      A simulated shell to explore tharavad's commands before you get access.
+      Type freely — nothing actually runs on the server.
+    </p>
+
+    <p class="hint-label">try these commands</p>
+    <div class="hint-list">
+      <button class="hint" onclick="runHint('ssh -p 2222 jake@tharavad.xyz')">
+        <code>ssh -p 2222 jake@tharavad.xyz</code>
+        <span class="hint-arrow">↵</span>
+      </button>
+      <button class="hint" onclick="runHint('tinker port')">
+        <code>tinker port</code>
+        <span class="hint-arrow">↵</span>
+      </button>
+      <button class="hint" onclick="runHint('tinker caddy myapp 45320')">
+        <code>tinker caddy myapp 45320</code>
+        <span class="hint-arrow">↵</span>
+      </button>
+      <button class="hint" onclick="runHint('tinker caddy list')">
+        <code>tinker caddy list</code>
+        <span class="hint-arrow">↵</span>
+      </button>
+      <button class="hint" onclick="runHint('help')">
+        <code>help</code>
+        <span class="hint-arrow">↵</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- RIGHT — terminal -->
+  <div class="terminal-pane">
+    <div class="terminal-bar">
+      <div class="dots">
+        <div class="dot dot-red"></div>
+        <div class="dot dot-yellow"></div>
+        <div class="dot dot-green"></div>
+      </div>
+      <div class="terminal-title">jake@tharavad.xyz — demo</div>
+    </div>
+
+    <div class="terminal-body" id="output"></div>
+
+    <div class="input-row">
+      <div class="ps1">
+        <span class="ps1-user">jake</span><span class="ps1-host">@tharavad</span><span class="ps1-path">:~</span><span class="ps1-sym">$</span>
+      </div>
+      <input id="cmd-input" type="text" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="type a command…" autofocus>
+      <button class="clear-btn" onclick="clearTerminal()">clear</button>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <a href="https://tharavad.xyz" style="color:inherit;text-decoration:none;">tharavad.xyz</a> &mdash; TinkerHub Kerala &mdash; demo only, no real shell
+</footer>
+
+<script>
+// ─── State ───────────────────────────────────────────────────────────────────
+const state = {
+  cwd: '~',
+  loggedIn: false,
+  username: null,
+  ports: [],
+  caddy: [],        // [{subdomain, port}]
+  history: [],
+  histIdx: -1,
+};
+
+// ─── Output helpers ──────────────────────────────────────────────────────────
+const out = document.getElementById('output');
+const input = document.getElementById('cmd-input');
+
+function line(text, cls = 'line-output') {
+  const el = document.createElement('span');
+  el.className = 'line ' + cls;
+  el.textContent = text;
+  out.appendChild(el);
+  return el;
+}
+
+function lineHTML(html, cls = 'line-output') {
+  const el = document.createElement('span');
+  el.className = 'line ' + cls;
+  el.innerHTML = html;
+  out.appendChild(el);
+  return el;
+}
+
+function blank() {
+  const el = document.createElement('span');
+  el.className = 'line-blank';
+  out.appendChild(el);
+}
+
+function promptLine(cmd) {
+  lineHTML(
+    `<span class="ps1-user">${state.username || 'jake'}</span>` +
+    `<span class="ps1-host">@tharavad</span>` +
+    `<span class="ps1-path">:${state.cwd}</span>` +
+    `<span class="ps1-sym">$ </span>` +
+    escHtml(cmd),
+    'line-prompt'
+  );
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function scrollDown() {
+  out.scrollTop = out.scrollHeight;
+}
+
+// ─── Boot banner ─────────────────────────────────────────────────────────────
+function boot() {
+  line('  _____ _                              _  ', 'line-banner');
+  line(' |_   _| |__   __ _ _ __ __ ___   ____ _  __| | ', 'line-banner');
+  line("   | | | '_ \\ / _` | '__/ _` \\ \\ / / _` |/ _` |", 'line-banner');
+  line('   | | | | | | (_| | | | (_| |\\ V / (_| | (_| |', 'line-banner');
+  line('   |_| |_| |_|\\__,_|_|  \\__,_| \\_/ \\__,_|\\__,_|', 'line-banner');
+  blank();
+  line('  TinkerHub Kerala — shared Linux server', 'line-dim');
+  line('  This is a demo shell. Nothing runs on the real server.', 'line-dim');
+  blank();
+  line('  Type  help  to see available commands.', 'line-info');
+  line('  Or click any command on the left to run it.', 'line-info');
+  blank();
+  scrollDown();
+}
+
+// ─── Command definitions ──────────────────────────────────────────────────────
+const COMMANDS = {
+
+  help(args) {
+    blank();
+    line('available commands', 'line-yellow');
+    blank();
+    line('  ssh -p 2222 <user>@tharavad.xyz    connect to the server', 'line-output');
+    line('  whoami                              show current user', 'line-output');
+    line('  pwd                                 print working directory', 'line-output');
+    line('  ls                                  list files', 'line-output');
+    line('  cd <dir>                            change directory', 'line-output');
+    line('  echo <text>                         print text', 'line-output');
+    line('  cat <file>                          print a file', 'line-output');
+    line('  mkdir <name>                        make a directory', 'line-output');
+    line('  tmux new -s <name>                  start a tmux session', 'line-output');
+    line('  tmux ls                             list sessions', 'line-output');
+    line('  tmux attach -t <name>               attach to a session', 'line-output');
+    line('  tinker port                         reserve a port', 'line-output');
+    line('  tinker port list                    your reserved ports', 'line-output');
+    line('  tinker port release <port>          free a port', 'line-output');
+    line('  tinker caddy <subdomain> <port>     go live at subdomain.tharavad.xyz', 'line-output');
+    line('  tinker caddy list                   your active subdomains', 'line-output');
+    line('  tinker caddy remove <subdomain>     take it offline', 'line-output');
+    line('  python3 -m http.server <port>       serve current dir', 'line-output');
+    line('  clear                               clear terminal', 'line-output');
+    blank();
+  },
+
+  ssh(args) {
+    // ssh -p 2222 user@tharavad.xyz
+    const full = args.join(' ');
+    const match = full.match(/-p\s+2222\s+(\w+)@tharavad\.xyz/);
+    if (!match) {
+      if (args.includes('-p') && !args.includes('2222')) {
+        line('ssh: connect to host tharavad.xyz port 22: Connection refused', 'line-error');
+        line('hint: tharavad runs SSH on port 2222. Use: ssh -p 2222 user@tharavad.xyz', 'line-dim');
+      } else {
+        line('usage: ssh -p 2222 <username>@tharavad.xyz', 'line-error');
+      }
+      return;
+    }
+    const user = match[1];
+    blank();
+    line(`Connecting to tharavad.xyz:2222 as ${user}…`, 'line-dim');
+    setTimeout(() => {
+      line('The authenticity of host \'[tharavad.xyz]:2222\' can\'t be established.', 'line-output');
+      line('ED25519 key fingerprint is SHA256:xK9mP2rTqL8nVjYsA1bCdEfGhIjKlMnO.', 'line-output');
+      line('Are you sure you want to continue connecting? (yes/no) yes', 'line-output');
+      setTimeout(() => {
+        line(`Warning: Permanently added '[tharavad.xyz]:2222' to the list of known hosts.`, 'line-dim');
+        line('', 'line-output');
+        blank();
+        line('  Welcome to tharavad — TinkerHub Kerala', 'line-success');
+        line(`  Logged in as: ${user}`, 'line-success');
+        line('  Disk: 0.1G / 5G used', 'line-dim');
+        line('  Run `help` to see what you can do.', 'line-dim');
+        blank();
+        state.loggedIn = true;
+        state.username = user;
+        updatePS1();
+        scrollDown();
+      }, 600);
+      scrollDown();
+    }, 800);
+  },
+
+  whoami(args) {
+    line(state.username || 'jake', 'line-output');
+  },
+
+  pwd(args) {
+    const full = state.cwd.replace('~', `/home/${state.username || 'jake'}`);
+    line(full, 'line-output');
+  },
+
+  ls(args) {
+    const dirFiles = {
+      '~': ['mysite/', 'notes.txt', '.bashrc', '.ssh/'],
+      '~/mysite': ['index.html', 'style.css', 'app.js'],
+      '~/.ssh': ['id_ed25519', 'id_ed25519.pub', 'known_hosts'],
+    };
+    const files = dirFiles[state.cwd] || dirFiles['~'];
+    blank();
+    line(files.map(f => f.endsWith('/') ? f : f).join('  ', ), 'line-output');
+    blank();
+  },
+
+  cd(args) {
+    const target = args[0];
+    if (!target || target === '~') { state.cwd = '~'; updatePS1(); return; }
+    const joined = target.startsWith('~') ? target : state.cwd + '/' + target;
+    const norm = joined.replace('//', '/');
+    const valid = ['~', '~/mysite', '~/.ssh'];
+    if (valid.includes(norm)) {
+      state.cwd = norm;
+      updatePS1();
+    } else {
+      line(`cd: ${target}: No such file or directory`, 'line-error');
+    }
+  },
+
+  echo(args) {
+    line(args.join(' '), 'line-output');
+  },
+
+  cat(args) {
+    const f = args[0];
+    const files = {
+      'notes.txt': ['TODO:', '  - host my project', '  - try tinker caddy'],
+      '.bashrc':   ['# ~/.bashrc', 'export PS1="\\u@tharavad:\\w$ "', 'alias ll="ls -la"'],
+      'index.html':['<!DOCTYPE html>', '<html><body><h1>hello from tharavad</h1></body></html>'],
+      'id_ed25519.pub': ['ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDemo...keydata jake@example.com'],
+    };
+    if (!f) { line('cat: missing operand', 'line-error'); return; }
+    const content = files[f];
+    if (!content) { line(`cat: ${f}: No such file or directory`, 'line-error'); return; }
+    blank();
+    content.forEach(l => line(l, 'line-output'));
+    blank();
+  },
+
+  mkdir(args) {
+    if (!args[0]) { line('mkdir: missing operand', 'line-error'); return; }
+    line(`mkdir: created directory '${args[0]}'`, 'line-dim');
+  },
+
+  clear() {
+    out.innerHTML = '';
+  },
+
+  tmux(args) {
+    const sub = args[0];
+    const rest = args.slice(1);
+
+    if (sub === 'new' || sub === 'new-session') {
+      const ni = rest.indexOf('-s');
+      const name = ni >= 0 ? rest[ni + 1] : 'main';
+      if (!name) { line('tmux: option requires an argument -- s', 'line-error'); return; }
+      blank();
+      line(`[tmux: created session '${name}']`, 'line-success');
+      line(`You're now inside a persistent tmux session.`, 'line-dim');
+      line(`To detach and keep it running: press Ctrl+B, then D`, 'line-info');
+      blank();
+      return;
+    }
+
+    if (sub === 'ls' || sub === 'list-sessions') {
+      const sessions = ['page: 1 windows (created Mon Apr 14 12:03:00 2025)'];
+      blank();
+      if (sessions.length === 0) {
+        line('no server running on /tmp/tmux-1000/default', 'line-error');
+      } else {
+        sessions.forEach(s => line(s, 'line-output'));
+      }
+      blank();
+      return;
+    }
+
+    if (sub === 'attach' || sub === 'a') {
+      const ti = rest.indexOf('-t');
+      const name = ti >= 0 ? rest[ti + 1] : null;
+      if (!name) { line('tmux attach: no sessions', 'line-error'); return; }
+      blank();
+      line(`[tmux: attached to session '${name}']`, 'line-success');
+      line(`You are now viewing the '${name}' session.`, 'line-dim');
+      blank();
+      return;
+    }
+
+    if (sub === 'kill-session') {
+      const ti = rest.indexOf('-t');
+      const name = ti >= 0 ? rest[ti + 1] : null;
+      line(name ? `[tmux: killed session '${name}']` : 'tmux: kill-session: no target specified', name ? 'line-dim' : 'line-error');
+      return;
+    }
+
+    line(`tmux: unknown command: ${sub || '(none)'}. Try: new -s <name>, ls, attach -t <name>`, 'line-error');
+  },
+
+  tinker(args) {
+    const sub = args[0];
+    const rest = args.slice(1);
+
+    // tinker port
+    if (sub === 'port') {
+      const action = rest[0];
+
+      if (!action) {
+        // reserve
+        const port = 45000 + Math.floor(Math.random() * 999) + 1;
+        state.ports.push(port);
+        blank();
+        line(`→ ${port}`, 'line-success');
+        line(`Port ${port} reserved for ${state.username || 'jake'}.`, 'line-dim');
+        blank();
+        return;
+      }
+
+      if (action === 'list') {
+        blank();
+        if (state.ports.length === 0) {
+          line('No ports reserved. Run `tinker port` to reserve one.', 'line-dim');
+        } else {
+          state.ports.forEach(p => {
+            line(`  ${p}   reserved   last active: just now`, 'line-output');
+          });
+        }
+        blank();
+        return;
+      }
+
+      if (action === 'release') {
+        const p = parseInt(rest[1]);
+        if (!p) { line('usage: tinker port release <port>', 'line-error'); return; }
+        const idx = state.ports.indexOf(p);
+        if (idx < 0) { line(`tinker: port ${p} not reserved by your account`, 'line-error'); return; }
+        state.ports.splice(idx, 1);
+        // also remove any caddy for it
+        state.caddy = state.caddy.filter(c => c.port !== p);
+        line(`Port ${p} released.`, 'line-dim');
+        return;
+      }
+
+      line(`tinker port: unknown subcommand '${action}'`, 'line-error');
+      return;
+    }
+
+    // tinker caddy
+    if (sub === 'caddy') {
+      const action = rest[0];
+
+      if (!action) { line('usage: tinker caddy <subdomain> <port>  |  list  |  remove <subdomain>', 'line-error'); return; }
+
+      if (action === 'list') {
+        blank();
+        if (state.caddy.length === 0) {
+          line('No active subdomains. Run `tinker caddy <name> <port>` to go live.', 'line-dim');
+        } else {
+          state.caddy.forEach(c => {
+            lineHTML(`  <span style="color:#3fb950">${c.subdomain}.tharavad.xyz</span>  →  :${c.port}   <span style="color:#555">(active)</span>`, 'line-output');
+          });
+        }
+        blank();
+        return;
+      }
+
+      if (action === 'remove') {
+        const sub2 = rest[1];
+        if (!sub2) { line('usage: tinker caddy remove <subdomain>', 'line-error'); return; }
+        const idx = state.caddy.findIndex(c => c.subdomain === sub2);
+        if (idx < 0) { line(`tinker: subdomain '${sub2}' not found`, 'line-error'); return; }
+        state.caddy.splice(idx, 1);
+        blank();
+        line(`Subdomain '${sub2}.tharavad.xyz' removed.`, 'line-dim');
+        blank();
+        return;
+      }
+
+      // tinker caddy <subdomain> <port>
+      const subdomain = action;
+      const port = parseInt(rest[1]);
+      if (!port) { line('usage: tinker caddy <subdomain> <port>', 'line-error'); return; }
+
+      const reserved = ['auth', 'vault', 'headscale', 'wiki'];
+      if (reserved.includes(subdomain)) {
+        line(`tinker: '${subdomain}' is a reserved subdomain name`, 'line-error');
+        return;
+      }
+      if (!state.ports.includes(port)) {
+        blank();
+        line(`tinker: port ${port} is not reserved by your account.`, 'line-error');
+        line(`Run 'tinker port' first to reserve a port.`, 'line-dim');
+        blank();
+        return;
+      }
+      if (state.caddy.find(c => c.subdomain === subdomain)) {
+        line(`tinker: subdomain '${subdomain}' is already in use`, 'line-error');
+        return;
+      }
+
+      state.caddy.push({ subdomain, port });
+      blank();
+      line(`✓ Live at https://${subdomain}.tharavad.xyz`, 'line-success');
+      line(`  → proxying to :${port}`, 'line-dim');
+      line(`  TLS certificate provisioned automatically by Caddy.`, 'line-dim');
+      blank();
+      return;
+    }
+
+    line(`tinker: unknown command '${sub}'. Try: port, caddy`, 'line-error');
+  },
+
+  python3(args) {
+    // python3 -m http.server <port>
+    if (args[0] === '-m' && args[1] === 'http.server') {
+      const port = parseInt(args[2]);
+      if (!port) { line('usage: python3 -m http.server <port>', 'line-error'); return; }
+      blank();
+      line(`Serving HTTP on 0.0.0.0 port ${port} (http://0.0.0.0:${port}/) ...`, 'line-success');
+      line(`Server is running. In a real session, this would block the terminal.`, 'line-dim');
+      line(`Detach from tmux (Ctrl+B, D) then run 'tinker caddy' to expose it.`, 'line-info');
+      blank();
+      return;
+    }
+    line('python3: command not simulated (try: python3 -m http.server <port>)', 'line-dim');
+  },
+};
+
+// aliases
+COMMANDS['python'] = COMMANDS['python3'];
+
+// ─── PS1 update ──────────────────────────────────────────────────────────────
+function updatePS1() {
+  const user = state.username || 'jake';
+  const ps1El = document.querySelector('.ps1');
+  ps1El.innerHTML =
+    `<span class="ps1-user">${user}</span>` +
+    `<span class="ps1-host">@tharavad</span>` +
+    `<span class="ps1-path">:${state.cwd}</span>` +
+    `<span class="ps1-sym">$ </span>`;
+}
+
+// ─── Run command ─────────────────────────────────────────────────────────────
+function run(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) return;
+
+  // history
+  state.history.unshift(trimmed);
+  state.histIdx = -1;
+
+  promptLine(trimmed);
+
+  const parts = trimmed.split(/\s+/);
+  const cmd = parts[0].toLowerCase();
+  const args = parts.slice(1);
+
+  if (cmd === 'clear') { out.innerHTML = ''; scrollDown(); return; }
+
+  const fn = COMMANDS[cmd];
+  if (fn) {
+    fn(args);
+  } else {
+    line(`bash: ${cmd}: command not found`, 'line-error');
+    line(`type 'help' to see available commands`, 'line-dim');
+  }
+
+  scrollDown();
+}
+
+// ─── Input handling ───────────────────────────────────────────────────────────
+input.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const val = input.value;
+    input.value = '';
+    run(val);
+  }
+  if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (state.histIdx < state.history.length - 1) {
+      state.histIdx++;
+      input.value = state.history[state.histIdx];
+    }
+  }
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (state.histIdx > 0) {
+      state.histIdx--;
+      input.value = state.history[state.histIdx];
+    } else {
+      state.histIdx = -1;
+      input.value = '';
+    }
+  }
+  if (e.key === 'l' && e.ctrlKey) {
+    e.preventDefault();
+    out.innerHTML = '';
+  }
+});
+
+function runHint(cmd) {
+  input.value = cmd;
+  input.focus();
+  run(cmd);
+  input.value = '';
+}
+
+function clearTerminal() {
+  out.innerHTML = '';
+  input.focus();
+}
+
+// Focus input on page click
+document.querySelector('.terminal-pane').addEventListener('click', () => input.focus());
+
+// ─── Boot ─────────────────────────────────────────────────────────────────────
+boot();
+input.focus();
+</script>
+</body>
+</html>
