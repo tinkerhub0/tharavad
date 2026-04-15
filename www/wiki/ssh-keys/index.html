@@ -6,57 +6,9 @@
 <title>SSH keys — tharavad wiki</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root { --bg: #0e0e0e; --bg2: #141414; --border: rgba(255,255,255,0.07); --text: #e8e8e8; --muted: #555; --muted2: #999; --green: #3fb950; --yellow: #d29922; --blue: #58a6ff; }
-  body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; -webkit-font-smoothing: antialiased; min-height: 100vh; }
-  header { padding: 28px 52px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--bg); z-index: 10; }
-  .wordmark { font-size: 14px; font-weight: 400; letter-spacing: 0.08em; color: var(--text); text-decoration: none; }
-  nav a { font-size: 12px; color: var(--muted2); text-decoration: none; letter-spacing: 0.06em; margin-left: 28px; }
-  nav a:hover { color: var(--text); }
-  .layout { display: grid; grid-template-columns: 220px 1fr; min-height: calc(100vh - 73px); }
-  .sidebar { border-right: 1px solid var(--border); padding: 40px 28px; position: sticky; top: 73px; height: calc(100vh - 73px); overflow-y: auto; }
-  .sidebar-section { margin-bottom: 36px; }
-  .sidebar-label { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; display: block; }
-  .sidebar a { display: block; font-size: 13px; color: var(--muted2); text-decoration: none; padding: 5px 0; letter-spacing: 0.02em; }
-  .sidebar a:hover { color: var(--text); }
-  .sidebar a.active { color: var(--green); }
-  .main { padding: 64px 72px 120px; max-width: 820px; }
-  .breadcrumb { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; margin-bottom: 40px; }
-  .breadcrumb a { color: var(--muted); text-decoration: none; }
-  .breadcrumb a:hover { color: var(--muted2); }
-  .breadcrumb span { margin: 0 8px; }
-  .page-eyebrow { font-size: 11px; letter-spacing: 0.2em; color: var(--muted); text-transform: uppercase; margin-bottom: 14px; }
-  h1 { font-size: 32px; font-weight: 300; letter-spacing: -0.02em; margin-bottom: 16px; line-height: 1.2; }
-  h2 { font-size: 13px; font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted2); margin: 52px 0 18px; }
-  h3 { font-size: 14px; font-weight: 500; color: var(--text); margin: 28px 0 10px; }
-  .lead { font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 17px; line-height: 1.8; color: var(--muted2); margin-bottom: 48px; max-width: 580px; }
-  p { font-family: 'IBM Plex Sans', sans-serif; font-weight: 300; font-size: 15px; line-height: 1.8; color: var(--muted2); margin-bottom: 16px; max-width: 620px; }
-  a { color: var(--green); text-decoration: none; }
-  a:hover { text-decoration: underline; }
-  pre { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 3px; padding: 18px 22px; font-size: 13px; line-height: 1.9; color: var(--text); overflow-x: auto; margin: 12px 0 20px; font-family: 'IBM Plex Mono', monospace; }
-  code { background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 2px; font-size: 12px; color: var(--green); font-family: 'IBM Plex Mono', monospace; }
-  .comment { color: var(--muted); }
-  .cmd { color: var(--green); }
-  .arg { color: var(--blue); }
-  .callout { border: 1px solid rgba(210,153,34,0.3); background: rgba(210,153,34,0.06); border-radius: 3px; padding: 16px 20px; margin: 20px 0; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 300; color: var(--muted2); line-height: 1.7; }
-  .callout strong { color: var(--yellow); font-weight: 400; }
-  .info { border: 1px solid rgba(88,166,255,0.25); background: rgba(88,166,255,0.05); border-radius: 3px; padding: 16px 20px; margin: 20px 0; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 300; color: var(--muted2); line-height: 1.7; }
-  .info strong { color: var(--blue); font-weight: 400; }
-  .explain-block { border-left: 2px solid var(--border); padding: 0 0 0 20px; margin: 16px 0 24px; }
-  .explain-row { display: grid; grid-template-columns: 180px 1fr; gap: 16px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
-  .explain-row:last-child { border-bottom: none; }
-  .explain-key { color: var(--green); font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
-  .explain-val { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 300; color: var(--muted2); line-height: 1.6; }
-  .divider { border: none; border-top: 1px solid var(--border); margin: 48px 0; }
-  .nav-footer { display: flex; justify-content: space-between; margin-top: 64px; padding-top: 32px; border-top: 1px solid var(--border); }
-  .nav-link { font-size: 12px; color: var(--muted2); text-decoration: none; letter-spacing: 0.06em; }
-  .nav-link:hover { color: var(--green); }
-  footer { padding: 24px 52px; border-top: 1px solid var(--border); font-size: 11px; color: var(--muted); letter-spacing: 0.06em; }
-  @media (max-width: 768px) { header, footer { padding-left: 20px; padding-right: 20px; } .layout { grid-template-columns: 1fr; } .sidebar { display: none; } .main { padding: 40px 20px 80px; } .explain-row { grid-template-columns: 1fr; } }
-</style>
+<link rel="stylesheet" href="../wiki.css">
 </head>
-<body>
+<body data-page="ssh-keys">
 <header>
   <a class="wordmark" href="../index.html">tharavad.xyz</a>
   <nav>
@@ -65,31 +17,7 @@
   </nav>
 </header>
 <div class="layout">
-  <aside class="sidebar">
-    <div class="sidebar-section">
-      <span class="sidebar-label">Overview</span>
-      <a href="../index.html">Introduction</a>
-      <a href="../getting-started/index.html">Getting started</a>
-    </div>
-    <div class="sidebar-section">
-      <span class="sidebar-label">Guides</span>
-      <a href="../request-access/index.html">Request access</a>
-      <a href="index.html" class="active">SSH keys</a>
-      <a href="../connecting/index.html">Connecting via SSH</a>
-    </div>
-    <div class="sidebar-section">
-      <span class="sidebar-label">Hosting</span>
-      <a href="../hosting/index.html">Hosting a project</a>
-      <a href="../ports/index.html">Ports</a>
-      <a href="../subdomains/index.html">Subdomains</a>
-      <a href="../tmux/index.html">Using tmux</a>
-    </div>
-    <div class="sidebar-section">
-      <span class="sidebar-label">Reference</span>
-      <a href="../tinker/index.html">tinker CLI</a>
-      <a href="../environment/index.html">Environment</a>
-    </div>
-  </aside>
+  <aside class="sidebar" id="wiki-sidebar"></aside>
   <main class="main">
     <div class="breadcrumb">
       <a href="../index.html">wiki</a><span>/</span>
@@ -184,5 +112,6 @@
   </main>
 </div>
 <footer><a href="https://tharavad.xyz" style="color:inherit;text-decoration:none;">tharavad.xyz</a> &mdash; TinkerHub Kerala</footer>
+<script src="../sidebar.js" data-root="../"></script>
 </body>
 </html>
