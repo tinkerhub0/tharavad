@@ -51,3 +51,11 @@ wiki.tharavad.xyz {
 	}
 	reverse_proxy 10.10.0.2:80
 }
+
+chat.tharvad.xyz {
+tls {
+		dns hetzner_cloud {env.HETZNER_TOKEN}
+		propagation_delay 2m
+	}
+	reverse_proxy 10.70.124.77:8065
+}
