@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hosting a project — tharavad wiki</title>
+<title>tinker CLI — tharavad wiki</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../wiki.css">
@@ -20,79 +20,139 @@
   <aside class="sidebar" id="wiki-sidebar"></aside>
   <main class="main">
     <div class="breadcrumb">
-      <a href="../index.html">wiki</a><span>/</span>hosting
+      <a href="../index.html">wiki</a><span>/</span>
+      <a href="tinker.html">reference</a><span>/</span>
+      tinker CLI
     </div>
-    <p class="page-eyebrow">subpage</p>
-    <h1>Hosting a project</h1>
-    <p class="lead">Three things come together to host a project on tharavad: a reserved port, a running server inside tmux, and a public subdomain pointed at it by Caddy.</p>
+    <p class="page-eyebrow">reference — subpage</p>
+    <h1>tinker CLI</h1>
+    <p class="lead">Complete reference for all <code>tinker</code> commands. The tinker CLI manages port reservations and Caddy subdomain routing for your tharavad account.</p>
 
-    <div class="section-label">full flow</div>
+    <h2>Port management</h2>
 
-    <div class="steps">
-      <div class="step">
-        <div class="step-num">01</div>
-        <div class="step-body">
-          <div class="step-title">Reserve a port</div>
-          <div class="step-desc">Run <code>tinker port</code> to get an available port number assigned to your account. All users share the same network namespace, so ports are reserved to avoid conflicts.</div>
-          <a class="step-link" href="../ports/index.html">Ports guide →</a>
+    <div class="cmd-group">
+      <div class="cmd-group-header">
+        <span class="cmd-group-title">tinker port</span>
+      </div>
+
+      <!-- tinker port -->
+      <div class="cmd-entry">
+        <div class="cmd-entry-header">
+          <div class="cmd-signature">
+            <span class="cmd-sig-cmd">tinker</span> <span class="cmd-sig-sub">port</span>
+          </div>
+        </div>
+        <div class="cmd-desc">Reserves a new available port for your account and prints the port number. The port is now exclusively yours — no other user can bind to it. Run this before starting any server you want to expose publicly.</div>
+        <div class="cmd-example">
+          <pre><span class="cmd">tinker port</span>
+<span class="out">→ 45320</span></pre>
         </div>
       </div>
-      <div class="step">
-        <div class="step-num">02</div>
-        <div class="step-body">
-          <div class="step-title">Start a tmux session</div>
-          <div class="step-desc">Processes started in a normal SSH shell die when you disconnect. tmux keeps your server running in the background persistently.</div>
-          <a class="step-link" href="../tmux/index.html">tmux guide →</a>
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-num">03</div>
-        <div class="step-body">
-          <div class="step-title">Start your server on the reserved port</div>
-          <div class="step-desc">Run whatever server you want — Python's built-in HTTP server, a Node app, a Go binary — on the port number you reserved.</div>
-          <pre><span class="comment"># example: static files</span>
-python3 -m http.server 45320
 
-<span class="comment"># example: node app</span>
-PORT=45320 node server.js</pre>
+      <!-- tinker port list -->
+      <div class="cmd-entry">
+        <div class="cmd-entry-header">
+          <div class="cmd-signature">
+            <span class="cmd-sig-cmd">tinker</span> <span class="cmd-sig-sub">port list</span>
+          </div>
+        </div>
+        <div class="cmd-desc">Lists all ports currently reserved under your account, along with when they were reserved and their last activity time. Useful when you have multiple projects and can't remember which port is which.</div>
+        <div class="cmd-example">
+          <pre><span class="cmd">tinker port list</span>
+<span class="out">45320   reserved 3 days ago   last active: 2h ago
+45321   reserved 1 day ago    last active: 10m ago</span></pre>
         </div>
       </div>
-      <div class="step">
-        <div class="step-num">04</div>
-        <div class="step-body">
-          <div class="step-title">Expose a public subdomain</div>
-          <div class="step-desc">Use <code>tinker caddy</code> to route a subdomain to your port. This creates a live HTTPS URL at <code>yourname.tharavad.xyz</code>.</div>
-          <a class="step-link" href="../subdomains/index.html">Subdomains guide →</a>
+
+      <!-- tinker port release -->
+      <div class="cmd-entry">
+        <div class="cmd-entry-header">
+          <div class="cmd-signature">
+            <span class="cmd-sig-cmd">tinker</span> <span class="cmd-sig-sub">port release</span> <span class="cmd-sig-arg">&lt;port&gt;</span>
+          </div>
+        </div>
+        <div class="cmd-desc">Frees a reserved port so it's available to other users. Do this when you're done with a project. Does not stop any server running on the port — you need to kill that separately (e.g. inside tmux).</div>
+        <table class="args-table">
+          <tr><td>&lt;port&gt;</td><td>The port number to release. Must be a port reserved by your account.</td></tr>
+        </table>
+        <div class="cmd-example">
+          <pre><span class="cmd">tinker port release</span> <span class="arg">45320</span></pre>
         </div>
       </div>
     </div>
 
-    <div class="callout">
-      <strong>Port lifetime:</strong> Reserved ports are automatically released after 7 days of inactivity. If your project stops working after a week, re-run <code>tinker port</code> and update your server and caddy config.
+    <h2>Subdomain routing</h2>
+
+    <div class="cmd-group">
+      <div class="cmd-group-header">
+        <span class="cmd-group-title">tinker caddy</span>
+      </div>
+
+      <!-- tinker caddy <subdomain> <port> -->
+      <div class="cmd-entry">
+        <div class="cmd-entry-header">
+          <div class="cmd-signature">
+            <span class="cmd-sig-cmd">tinker</span> <span class="cmd-sig-sub">caddy</span> <span class="cmd-sig-arg">&lt;subdomain&gt;</span> <span class="cmd-sig-arg">&lt;port&gt;</span>
+          </div>
+        </div>
+        <div class="cmd-desc">Creates a public HTTPS route at <code>&lt;subdomain&gt;.tharavad.xyz</code> that proxies to your server on <code>&lt;port&gt;</code>. The subdomain goes live immediately — no DNS propagation wait. TLS is handled automatically by Caddy. The port must already be reserved with <code>tinker port</code> and a server must be running on it.</div>
+        <table class="args-table">
+          <tr><td>&lt;subdomain&gt;</td><td>The subdomain prefix. Must be unique across all users. Becomes <code>subdomain.tharavad.xyz</code>.</td></tr>
+          <tr><td>&lt;port&gt;</td><td>The local port your server is listening on.</td></tr>
+        </table>
+        <div class="cmd-example">
+          <pre><span class="cmd">tinker caddy</span> <span class="arg">myapp</span> <span class="arg">45320</span>
+<span class="out">→ live at https://myapp.tharavad.xyz</span>
+
+<span class="comment"># multiple subdomains pointing to different ports</span>
+<span class="cmd">tinker caddy</span> <span class="arg">api</span>    <span class="arg">45320</span>
+<span class="cmd">tinker caddy</span> <span class="arg">blog</span>   <span class="arg">45321</span></pre>
+        </div>
+      </div>
+
+      <!-- tinker caddy list -->
+      <div class="cmd-entry">
+        <div class="cmd-entry-header">
+          <div class="cmd-signature">
+            <span class="cmd-sig-cmd">tinker</span> <span class="cmd-sig-sub">caddy list</span>
+          </div>
+        </div>
+        <div class="cmd-desc">Lists all active subdomain routes registered to your account. Shows the subdomain, the port it's routing to, and when the route was created.</div>
+        <div class="cmd-example">
+          <pre><span class="cmd">tinker caddy list</span>
+<span class="out">myapp.tharavad.xyz  →  :45320   (created 2h ago)
+blog.tharavad.xyz   →  :45321   (created 1d ago)</span></pre>
+        </div>
+      </div>
+
+      <!-- tinker caddy remove -->
+      <div class="cmd-entry">
+        <div class="cmd-entry-header">
+          <div class="cmd-signature">
+            <span class="cmd-sig-cmd">tinker</span> <span class="cmd-sig-sub">caddy remove</span> <span class="cmd-sig-arg">&lt;subdomain&gt;</span>
+          </div>
+        </div>
+        <div class="cmd-desc">Removes the public routing rule for a subdomain. The subdomain stops resolving immediately. Your server continues running on its port — it's just no longer publicly accessible. Use this to take a project offline without stopping the server.</div>
+        <table class="args-table">
+          <tr><td>&lt;subdomain&gt;</td><td>The subdomain prefix to remove (not the full URL — just the part before <code>.tharavad.xyz</code>).</td></tr>
+        </table>
+        <div class="cmd-example">
+          <pre><span class="cmd">tinker caddy remove</span> <span class="arg">myapp</span></pre>
+        </div>
+      </div>
     </div>
 
-    <div class="section-label">detailed guides</div>
+    <h2>Quick reference</h2>
+    <pre><span class="comment"># ports</span>
+<span class="cmd">tinker port</span>                        <span class="comment">reserve a new port</span>
+<span class="cmd">tinker port list</span>                   <span class="comment">your reserved ports</span>
+<span class="cmd">tinker port release</span> <span class="arg">&lt;port&gt;</span>         <span class="comment">free a port</span>
 
-    <div class="card-grid">
-      <a class="card" href="../ports/index.html">
-        <span class="card-tag">guide</span>
-        <h3>Ports</h3>
-        <p>Reserve, list, and release ports with tinker.</p>
-        <span class="card-arrow">→</span>
-      </a>
-      <a class="card" href="../subdomains/index.html">
-        <span class="card-tag">guide</span>
-        <h3>Subdomains</h3>
-        <p>Route public subdomains to your running server.</p>
-        <span class="card-arrow">→</span>
-      </a>
-      <a class="card" href="../tmux/index.html">
-        <span class="card-tag">guide</span>
-        <h3>Using tmux</h3>
-        <p>Keep servers running after you disconnect from SSH.</p>
-        <span class="card-arrow">→</span>
-      </a>
-    </div>
+<span class="comment"># subdomains</span>
+<span class="cmd">tinker caddy</span> <span class="arg">&lt;subdomain&gt; &lt;port&gt;</span>    <span class="comment">go live at subdomain.tharavad.xyz</span>
+<span class="cmd">tinker caddy list</span>                  <span class="comment">your active subdomains</span>
+<span class="cmd">tinker caddy remove</span> <span class="arg">&lt;subdomain&gt;</span>    <span class="comment">take it offline</span></pre>
+
   </main>
 </div>
 <footer><a href="https://tharavad.xyz" style="color:inherit;text-decoration:none;">tharavad.xyz</a> &mdash; TinkerHub Kerala</footer>
