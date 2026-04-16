@@ -1,0 +1,477 @@
+#!/bin/bash
+# ship — tharavad deploy tool
+# Install: cp ship /usr/local/bin/ship && chmod 755 /usr/local/bin/ship
+
+SHIP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+TINKER="${SHIP_DIR}/tinker"
+[[ -x "$TINKER" ]] || TINKER="$(command -v tinker 2>/dev/null)" || { echo "Error: tinker not found (expected alongside ship or in PATH)" >&2; exit 1; }
+
+THARAV_HOME="$HOME/.tharav"
+MANIFEST="$THARAV_HOME/manifest"
+SCRIPTS_DIR="$THARAV_HOME/scripts"
+REPOS_DIR="$THARAV_HOME/repos"
+LOGS_DIR="$THARAV_HOME/logs"
+PIDS_DIR="$THARAV_HOME/pids"
+SSH_KEY="$HOME/.ssh/github"
+
+# ── helpers ───────────────────────────────────────────────────────────────────
+
+die()  { echo "Error: $*" >&2; exit 1; }
+info() { echo "  $*"; }
+ok()   { echo "✓ $*"; }
+
+ensure_dirs() {
+  mkdir -p "$THARAV_HOME" "$SCRIPTS_DIR" "$REPOS_DIR" "$LOGS_DIR" "$PIDS_DIR"
+}
+
+# ── manifest ──────────────────────────────────────────────────────────────────
+# format: name|port|subdomain|repo_url|branch|runtime|start_cmd
+
+manifest_has() {
+  grep -q "^${1}|" "$MANIFEST" 2>/dev/null
+}
+
+manifest_port_used() {
+  grep -q "|${1}|" "$MANIFEST" 2>/dev/null
+}
+
+manifest_write() {
+  local name="$1" port="$2" subdomain="$3" repo_url="$4" branch="$5" runtime="$6" start_cmd="$7"
+  echo "${name}|${port}|${subdomain}|${repo_url}|${branch}|${runtime}|${start_cmd}" >> "$MANIFEST"
+}
+
+# ── crontab ───────────────────────────────────────────────────────────────────
+
+cron_read() {
+  crontab -l 2>/dev/null || true
+}
+
+cron_write() {
+  printf '%s\n' "$1" | crontab -
+}
+
+cron_ensure_path() {
+  local content="$1"
+  local path_line="PATH=/usr/local/bin:/usr/bin:/bin:${HOME}/.local/bin"
+  if echo "$content" | grep -q "^PATH="; then
+    echo "$content"
+  elif [[ -n "$content" ]]; then
+    printf '%s\n%s' "$path_line" "$content"
+  else
+    printf '%s' "$path_line"
+  fi
+}
+
+cron_add() {
+  local name="$1" script="$2" logfile="$3"
+  local block
+  block="# BEGIN tharav:${name}
+*/5 * * * * ${script} >> ${logfile} 2>&1
+# END tharav:${name}"
+
+  local current
+  current=$(cron_read)
+  current=$(cron_ensure_path "$current")
+  if [[ -n "$current" ]]; then
+    cron_write "${current}
+${block}"
+  else
+    cron_write "${block}"
+  fi
+}
+
+cron_remove() {
+  local name="$1"
+  local current new
+  current=$(cron_read)
+  new=$(printf '%s\n' "$current" | awk "/# BEGIN tharav:${name}/{f=1} !f{print} /# END tharav:${name}/{f=0}")
+  cron_write "$new"
+}
+
+# ── runtime detection ─────────────────────────────────────────────────────────
+
+detect_runtime() {
+  local repo_dir="$1"
+  if [[ -f "$repo_dir/package.json" ]]; then
+    echo "node"
+  elif [[ -f "$repo_dir/requirements.txt" || -f "$repo_dir/pyproject.toml" ]]; then
+    echo "python"
+  elif [[ -f "$repo_dir/index.html" ]]; then
+    echo "static"
+  else
+    echo "unknown"
+  fi
+}
+
+detect_start_cmd() {
+  local repo_dir="$1" runtime="$2" port="$3"
+  case "$runtime" in
+    node)
+      local start
+      start=$(grep -oP '"start"\s*:\s*"\K[^"]+' "$repo_dir/package.json" 2>/dev/null || true)
+      if [[ -n "$start" ]]; then
+        echo "cd ${repo_dir} && PORT=${port} ${start}"
+      else
+        echo "cd ${repo_dir} && PORT=${port} node ."
+      fi
+      ;;
+    python)
+      echo "cd ${repo_dir} && PORT=${port} python -m uvicorn main:app --port ${port} --host 0.0.0.0"
+      ;;
+    static)
+      echo "cd ${repo_dir} && python3 -m http.server ${port}"
+      ;;
+    *)
+      echo ""
+      ;;
+  esac
+}
+
+# ── deploy script template ────────────────────────────────────────────────────
+
+render_deploy_script() {
+  local name="$1"
+  local repo_dir="$2"
+  local branch="$3"
+  local runtime="$4"
+  local start_cmd="$5"
+  local port="$6"
+  local log_file="$7"
+  local pid_file="$8"
+
+  # Build runtime-specific install step (single-quoted → literal $LOG_FILE)
+  local install_step
+  case "$runtime" in
+    node)
+      install_step='  npm ci --silent 2>>"$LOG_FILE" || npm install --silent 2>>"$LOG_FILE"'
+      ;;
+    python)
+      install_step='  if [[ -f requirements.txt ]]; then pip install -q -r requirements.txt 2>>"$LOG_FILE"
+  elif [[ -f pyproject.toml ]]; then pip install -q -e . 2>>"$LOG_FILE"; fi'
+      ;;
+    static)
+      install_step='  : # static — no install step'
+      ;;
+    *)
+      install_step='  : # no install step'
+      ;;
+  esac
+
+  # Unquoted heredoc: outer ${vars} expand now; inner \$vars appear literally
+  cat << DEPLOY_SCRIPT
+#!/bin/bash
+set -euo pipefail
+
+# ── config ────────────────────────────────────────────────────────────────────
+APP_NAME="${name}"
+REPO_DIR="${repo_dir}"
+BRANCH="${branch}"
+START_CMD="${start_cmd}"
+PORT="${port}"
+LOG_FILE="${log_file}"
+PID_FILE="${pid_file}"
+
+# ── log helper ────────────────────────────────────────────────────────────────
+log() {
+  echo "[\$(date '+%Y-%m-%d %H:%M:%S')] \$*" | tee -a "\$LOG_FILE"
+}
+
+# ── log rotation (>1MB → truncate) ───────────────────────────────────────────
+if [[ -f "\$LOG_FILE" ]] && (( \$(stat -c%s "\$LOG_FILE" 2>/dev/null || echo 0) > 1048576 )); then
+  echo "[\$(date '+%Y-%m-%d %H:%M:%S')] log rotated" > "\$LOG_FILE"
+fi
+
+log "─── deploy \$APP_NAME ───"
+
+# ── git pull ──────────────────────────────────────────────────────────────────
+cd "\$REPO_DIR"
+BEFORE=\$(git rev-parse HEAD)
+git fetch origin "\$BRANCH" >> "\$LOG_FILE" 2>&1
+git reset --hard "origin/\$BRANCH" >> "\$LOG_FILE" 2>&1
+AFTER=\$(git rev-parse HEAD)
+
+if [[ "\$BEFORE" == "\$AFTER" ]]; then
+  log "no changes (still at \${BEFORE:0:7}), skipping restart"
+  exit 0
+fi
+
+log "updated \${BEFORE:0:7} → \${AFTER:0:7}"
+
+# ── install dependencies ──────────────────────────────────────────────────────
+${install_step}
+
+# ── graceful stop ─────────────────────────────────────────────────────────────
+if [[ -f "\$PID_FILE" ]]; then
+  OLD_PID=\$(cat "\$PID_FILE")
+  if kill -0 "\$OLD_PID" 2>/dev/null; then
+    log "stopping old process (PID \$OLD_PID)"
+    kill "\$OLD_PID"
+    sleep 1
+  fi
+fi
+
+# ── start new process ─────────────────────────────────────────────────────────
+log "starting: \$START_CMD"
+eval "\$START_CMD" >> "\$LOG_FILE" 2>&1 &
+NEW_PID=\$!
+echo "\$NEW_PID" > "\$PID_FILE"
+log "started (PID \$NEW_PID)"
+
+log "done — \$(git log -1 --format='%s')"
+DEPLOY_SCRIPT
+}
+
+# ── ship setup ────────────────────────────────────────────────────────────────
+
+cmd_setup() {
+  local key_abs
+  key_abs="$(realpath -m "$SSH_KEY")"
+
+  # Step 1: check if key already exists
+  if [[ -f "$key_abs" ]]; then
+    info "SSH key already exists at $key_abs, skipping keygen"
+  else
+    # Step 2: generate key
+    info "Generating SSH key at $key_abs ..."
+    mkdir -p "$(dirname "$key_abs")"
+    chmod 700 "$(dirname "$key_abs")"
+    ssh-keygen -t ed25519 -C "tharavad-deploy" -f "$key_abs" -N ""
+    echo
+  fi
+
+  # Step 3: print public key, wait for confirmation
+  echo
+  echo "── Add this public key to GitHub → Settings → SSH and GPG keys ──────────────"
+  cat "${key_abs}.pub"
+  echo "────────────────────────────────────────────────────────────────────────────"
+  echo
+  read -rp "Press Enter once you've added the key to GitHub... "
+  echo
+
+  # Step 4: update ~/.ssh/config idempotently
+  local ssh_config="$HOME/.ssh/config"
+  mkdir -p "$HOME/.ssh"
+  chmod 700 "$HOME/.ssh"
+
+  if [[ -f "$ssh_config" ]] && grep -q "^Host github\.com" "$ssh_config"; then
+    info "~/.ssh/config already has Host github.com block, ensuring IdentityFile ..."
+    # If IdentityFile line exists in the block, update it; otherwise it stays
+    awk -v key="$key_abs" '
+      /^Host github\.com$/ { in_block=1; print; next }
+      in_block && /^Host / { in_block=0 }
+      in_block && /IdentityFile/ { print "  IdentityFile " key; next }
+      { print }
+    ' "$ssh_config" > "${ssh_config}.tmp" && mv "${ssh_config}.tmp" "$ssh_config"
+  else
+    info "Adding Host github.com block to ~/.ssh/config ..."
+    cat >> "$ssh_config" << EOF
+
+Host github.com
+  HostName github.com
+  User git
+  IdentityFile ${key_abs}
+  IdentitiesOnly yes
+  StrictHostKeyChecking accept-new
+EOF
+  fi
+  chmod 600 "$ssh_config"
+  ok "~/.ssh/config updated"
+
+  # Step 5: test SSH connection
+  info "Testing SSH connection to GitHub ..."
+  local ssh_out
+  ssh_out=$(ssh -T git@github.com 2>&1 || true)
+
+  if echo "$ssh_out" | grep -q "^Hi "; then
+    local github_user
+    github_user=$(echo "$ssh_out" | grep -oP "(?<=Hi )[^!]+")
+    ok "Connected to GitHub as: $github_user"
+  elif echo "$ssh_out" | grep -q "Permission denied"; then
+    die "SSH key not accepted. Make sure you saved the correct key to GitHub."
+  elif echo "$ssh_out" | grep -q "Could not resolve\|Name or service not known"; then
+    die "Cannot reach github.com — check your network."
+  else
+    die "Unexpected SSH response: $ssh_out"
+  fi
+}
+
+# ── ship init ─────────────────────────────────────────────────────────────────
+
+cmd_init() {
+  local name="" repo_url="" branch="main" runtime="" port="" start_cmd="" subdomain=""
+  local no_caddy=false no_cron=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --runtime)   runtime="$2";   shift 2 ;;
+      --port)      port="$2";      shift 2 ;;
+      --start-cmd) start_cmd="$2"; shift 2 ;;
+      --branch)    branch="$2";    shift 2 ;;
+      --subdomain) subdomain="$2"; shift 2 ;;
+      --no-caddy)  no_caddy=true;  shift ;;
+      --no-cron)   no_cron=true;   shift ;;
+      -*)          die "Unknown flag: $1" ;;
+      *)
+        if [[ -z "$name" ]];        then name="$1"
+        elif [[ -z "$repo_url" ]];  then repo_url="$1"
+        else die "Unexpected argument: $1"
+        fi
+        shift ;;
+    esac
+  done
+
+  [[ -z "$name" ]]     && die "Usage: ship init <name> <repo-url> [flags]"
+  [[ -z "$repo_url" ]] && die "Usage: ship init <name> <repo-url> [flags]"
+
+  # Validate name
+  [[ "$name" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "Name must be lowercase alphanumeric + dashes (e.g. my-app)"
+
+  # Default subdomain to name
+  [[ -z "$subdomain" ]] && subdomain="$name"
+
+  ensure_dirs
+
+  # Check manifest collision
+  manifest_has "$name" && die "App '$name' already exists in manifest"
+
+  # Resolve paths
+  local repo_dir="${REPOS_DIR}/${name}"
+  local script_file="${SCRIPTS_DIR}/${name}.sh"
+  local log_file="${LOGS_DIR}/${name}.log"
+  local cron_log="${LOGS_DIR}/${name}.cron.log"
+  local pid_file="${PIDS_DIR}/${name}.pid"
+
+  # Clone
+  [[ -d "$repo_dir" ]] && die "Directory $repo_dir already exists. Remove it or choose a different name."
+  info "Cloning $repo_url → $repo_dir ..."
+  GIT_SSH_COMMAND="ssh -i ${SSH_KEY} -o IdentitiesOnly=yes" git clone "$repo_url" "$repo_dir" \
+    || die "git clone failed — run 'ship setup' if SSH is not configured"
+
+  # Detect runtime
+  if [[ -z "$runtime" ]]; then
+    runtime=$(detect_runtime "$repo_dir")
+    if [[ "$runtime" == "unknown" ]]; then
+      [[ -z "$start_cmd" ]] && die "Could not detect runtime. Provide --runtime <node|python|static> or --start-cmd <cmd>"
+      runtime="custom"
+    else
+      info "Detected runtime: $runtime"
+    fi
+  fi
+
+  # Reserve port
+  if [[ -z "$port" ]]; then
+    info "Reserving port via tinker ..."
+    port=$("$TINKER" port) || die "Failed to reserve port"
+    info "Reserved port: $port"
+  else
+    info "Using port: $port"
+  fi
+
+  # Port collision guard against manifest
+  manifest_port_used "$port" && die "Port $port is already used by another ship app"
+
+  # Resolve start command (port is now known)
+  if [[ -z "$start_cmd" ]]; then
+    start_cmd=$(detect_start_cmd "$repo_dir" "$runtime" "$port")
+    [[ -z "$start_cmd" ]] && die "Could not determine start command. Provide --start-cmd <cmd>"
+    info "Start command: $start_cmd"
+  fi
+
+  # Render deploy script
+  info "Rendering deploy script → $script_file"
+  render_deploy_script "$name" "$repo_dir" "$branch" "$runtime" "$start_cmd" "$port" "$log_file" "$pid_file" \
+    > "$script_file"
+  chmod +x "$script_file"
+
+  # Run once to verify
+  info "Running deploy script (first deploy) ..."
+  "$script_file" || die "Deploy script failed — check $log_file"
+
+  # Confirm server is up
+  sleep 2
+  info "Checking http://localhost:${port} ..."
+  if ! curl -sf --max-time 5 "http://localhost:${port}" -o /dev/null 2>/dev/null; then
+    die "Server did not respond at http://localhost:${port} — check $log_file"
+  fi
+  ok "Server is up at http://localhost:${port}"
+
+  # Caddy
+  if [[ "$no_caddy" == false ]]; then
+    info "Registering with caddy: ${subdomain}.tharavad.xyz → :${port} ..."
+    "$TINKER" caddy "$subdomain" "$port" || die "tinker caddy failed"
+    info "Waiting 30s for HTTPS to propagate ..."
+    sleep 30
+    local https_status
+    https_status=$(curl -sI --max-time 10 "https://${subdomain}.tharavad.xyz" 2>/dev/null | head -1 || true)
+    if echo "$https_status" | grep -qE "200|301|302"; then
+      ok "HTTPS live at https://${subdomain}.tharavad.xyz"
+    else
+      info "Warning: HTTPS check returned: ${https_status:-no response} (may still be propagating)"
+    fi
+  fi
+
+  # Cron
+  if [[ "$no_cron" == false ]]; then
+    info "Installing cron entry (every 5 minutes) ..."
+    cron_add "$name" "$script_file" "$cron_log"
+    ok "Cron installed"
+  fi
+
+  # Write to manifest
+  manifest_write "$name" "$port" "$subdomain" "$repo_url" "$branch" "$runtime" "$start_cmd"
+
+  echo
+  echo "────────────────────────────────────────────────────────────────────────────"
+  echo "  App:      $name"
+  [[ "$no_caddy" == false ]] && echo "  URL:      https://${subdomain}.tharavad.xyz"
+  echo "  Port:     $port"
+  echo "  Logs:     $log_file"
+  echo "  Deploy:   $script_file"
+  [[ "$no_cron" == false ]]  && echo "  Cron:     every 5 min → $cron_log"
+  echo
+  echo "  Manual deploy: $script_file"
+  echo "  Tail logs:     tail -f $log_file"
+  echo "────────────────────────────────────────────────────────────────────────────"
+}
+
+# ── help ──────────────────────────────────────────────────────────────────────
+
+cmd_help() {
+  cat << EOF
+ship — tharavad deploy tool
+
+  ship setup                           configure SSH key for GitHub
+  ship init <name> <repo-url> [flags]  clone, deploy, and register a new app
+
+init flags:
+  --branch <branch>                    git branch to track (default: main)
+  --runtime <node|python|static>       override auto-detected runtime
+  --start-cmd <cmd>                    override start command
+  --port <port>                        use a specific port instead of auto-reserving
+  --subdomain <name>                   override subdomain (default: same as <name>)
+  --no-caddy                           skip caddy registration
+  --no-cron                            skip cron installation
+
+runtime detection (auto):
+  package.json         → node   (reads scripts.start)
+  requirements.txt     → python (uvicorn main:app)
+  pyproject.toml       → python
+  index.html at root   → static (python3 -m http.server)
+
+examples:
+  ship setup
+  ship init myapp git@github.com:user/myapp.git
+  ship init api git@github.com:user/api.git --branch prod --port 45320
+  ship init blog git@github.com:user/blog.git --runtime static --no-cron
+  ship init site git@github.com:user/site.git --start-cmd "cd ~/.tharav/repos/site && node server.js"
+EOF
+}
+
+# ── dispatch ──────────────────────────────────────────────────────────────────
+
+case "${1:-}" in
+  setup)   shift; cmd_setup "$@" ;;
+  init)    shift; cmd_init  "$@" ;;
+  help|"") cmd_help ;;
+  *)       echo "Unknown command: $1"; echo; cmd_help; exit 1 ;;
+esac
