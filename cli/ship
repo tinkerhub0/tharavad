@@ -40,6 +40,25 @@ manifest_write() {
   echo "${name}|${port}|${subdomain}|${repo_url}|${branch}|${runtime}|${start_cmd}" >> "$MANIFEST"
 }
 
+manifest_remove() {
+  local name="$1"
+  [[ -f "$MANIFEST" ]] && sed -i "/^${name}|/d" "$MANIFEST"
+}
+
+manifest_get() {
+  local name="$1" field="$2"
+  local line
+  line=$(grep "^${name}|" "$MANIFEST" 2>/dev/null) || return 1
+  case "$field" in
+    port)      echo "$line" | cut -d'|' -f2 ;;
+    subdomain) echo "$line" | cut -d'|' -f3 ;;
+    repo_url)  echo "$line" | cut -d'|' -f4 ;;
+    branch)    echo "$line" | cut -d'|' -f5 ;;
+    runtime)   echo "$line" | cut -d'|' -f6 ;;
+    start_cmd) echo "$line" | cut -d'|' -f7 ;;
+  esac
+}
+
 # ── crontab ───────────────────────────────────────────────────────────────────
 
 cron_read() {
@@ -341,11 +360,26 @@ cmd_init() {
   local cron_log="${LOGS_DIR}/${name}.cron.log"
   local pid_file="${PIDS_DIR}/${name}.pid"
 
-  # Clone
-  [[ -d "$repo_dir" ]] && die "Directory $repo_dir already exists. Remove it or choose a different name."
+  # Cleanup trap — runs on any failure after this point
+  local _cloned=false
+  cleanup_on_fail() {
+    echo "  cleaning up failed init for '$name' ..." >&2
+    $_cloned && rm -rf "$repo_dir"
+    rm -f "$script_file"
+    cron_remove "$name" 2>/dev/null || true
+    manifest_remove "$name"
+  }
+  trap cleanup_on_fail ERR
+
+  # Clone — if dir exists from a previous failed run, remove it and retry
+  if [[ -d "$repo_dir" ]]; then
+    info "Stale directory found at $repo_dir, removing ..."
+    rm -rf "$repo_dir"
+  fi
   info "Cloning $repo_url → $repo_dir ..."
   GIT_SSH_COMMAND="ssh -i ${SSH_KEY} -o IdentitiesOnly=yes" git clone "$repo_url" "$repo_dir" \
     || die "git clone failed — run 'ship setup' if SSH is not configured"
+  _cloned=true
 
   # Detect runtime
   if [[ -z "$runtime" ]]; then
@@ -417,6 +451,8 @@ cmd_init() {
     ok "Cron installed"
   fi
 
+  trap - ERR  # disarm cleanup — init succeeded
+
   # Write to manifest
   manifest_write "$name" "$port" "$subdomain" "$repo_url" "$branch" "$runtime" "$start_cmd"
 
@@ -434,6 +470,76 @@ cmd_init() {
   echo "────────────────────────────────────────────────────────────────────────────"
 }
 
+# ── ship list ─────────────────────────────────────────────────────────────────
+
+cmd_list() {
+  if [[ ! -f "$MANIFEST" ]] || [[ ! -s "$MANIFEST" ]]; then
+    echo "No apps registered. Run 'ship init' to deploy one."
+    return
+  fi
+
+  printf "%-16s %-6s %-20s %-10s %s\n" "NAME" "PORT" "URL" "RUNTIME" "BRANCH"
+  printf "%-16s %-6s %-20s %-10s %s\n" "────────────────" "──────" "────────────────────" "──────────" "──────"
+
+  while IFS='|' read -r name port subdomain repo_url branch runtime _; do
+    local pid_file="${PIDS_DIR}/${name}.pid"
+    local status="stopped"
+    if [[ -f "$pid_file" ]] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
+      status="running"
+    fi
+    printf "%-16s %-6s %-20s %-10s %s  [%s]\n" \
+      "$name" "$port" "${subdomain}.tharavad.xyz" "$runtime" "$branch" "$status"
+  done < "$MANIFEST"
+}
+
+# ── ship remove ───────────────────────────────────────────────────────────────
+
+cmd_remove() {
+  local name="${1:-}"
+  [[ -z "$name" ]] && die "Usage: ship remove <name>"
+
+  manifest_has "$name" || die "App '$name' not found in manifest"
+
+  local port subdomain
+  port=$(manifest_get "$name" port)
+  subdomain=$(manifest_get "$name" subdomain)
+
+  local repo_dir="${REPOS_DIR}/${name}"
+  local script_file="${SCRIPTS_DIR}/${name}.sh"
+  local log_file="${LOGS_DIR}/${name}.log"
+  local cron_log="${LOGS_DIR}/${name}.cron.log"
+  local pid_file="${PIDS_DIR}/${name}.pid"
+
+  # Stop running process
+  if [[ -f "$pid_file" ]]; then
+    local pid
+    pid=$(cat "$pid_file")
+    if kill -0 "$pid" 2>/dev/null; then
+      info "Stopping process (PID $pid) ..."
+      kill "$pid" && sleep 1
+    fi
+    rm -f "$pid_file"
+  fi
+
+  # Remove cron entry
+  info "Removing cron entry ..."
+  cron_remove "$name"
+
+  # Remove caddy
+  info "Removing caddy route ($subdomain.tharavad.xyz) ..."
+  "$TINKER" caddy remove "$subdomain" 2>/dev/null || true
+
+  # Remove files
+  info "Removing repo, script, and logs ..."
+  rm -rf "$repo_dir"
+  rm -f "$script_file" "$log_file" "$cron_log"
+
+  # Remove from manifest
+  manifest_remove "$name"
+
+  ok "Removed $name"
+}
+
 # ── help ──────────────────────────────────────────────────────────────────────
 
 cmd_help() {
@@ -442,6 +548,8 @@ ship — tharavad deploy tool
 
   ship setup                           configure SSH key for GitHub
   ship init <name> <repo-url> [flags]  clone, deploy, and register a new app
+  ship list                            show all registered apps and their status
+  ship remove <name>                   stop, unregister, and delete an app
 
 init flags:
   --branch <branch>                    git branch to track (default: main)
@@ -470,8 +578,10 @@ EOF
 # ── dispatch ──────────────────────────────────────────────────────────────────
 
 case "${1:-}" in
-  setup)   shift; cmd_setup "$@" ;;
-  init)    shift; cmd_init  "$@" ;;
+  setup)   shift; cmd_setup  "$@" ;;
+  init)    shift; cmd_init   "$@" ;;
+  list)          cmd_list        ;;
+  remove)  shift; cmd_remove "$@" ;;
   help|"") cmd_help ;;
   *)       echo "Unknown command: $1"; echo; cmd_help; exit 1 ;;
 esac
