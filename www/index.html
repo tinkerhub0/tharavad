@@ -16,6 +16,7 @@
     --muted: #555;
     --muted2: #888;
     --green: #3fb950;
+    --red: #f85149;
   }
 
   html, body {
@@ -62,7 +63,10 @@
     width: 7px; height: 7px;
     border-radius: 50%;
     background: var(--green);
+    transition: background 0.3s;
   }
+
+  .dot.offline { background: var(--red); }
 
   main {
     flex: 1;
@@ -223,8 +227,8 @@
 <header>
   <span class="wordmark">tharavad.xyz</span>
   <div class="status">
-    <div class="dot"></div>
-    online
+    <div class="dot" id="status-dot"></div>
+    <span id="status-text">online</span>
   </div>
 </header>
 
@@ -281,5 +285,30 @@
   <a href="https://github.com/tinkerhub0/tharavad">github ↗</a>
 </footer>
 
+<script>
+  const dot  = document.getElementById('status-dot');
+  const text = document.getElementById('status-text');
+
+  function setStatus(online) {
+    dot.classList.toggle('offline', !online);
+    text.textContent = online ? 'online' : 'offline';
+  }
+
+  async function checkServer() {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 5000);
+    try {
+      await fetch('https://auth.tharavad.xyz', { signal: ctrl.signal, mode: 'no-cors' });
+      setStatus(true);
+    } catch {
+      setStatus(false);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  checkServer();
+  setInterval(checkServer, 30000);
+</script>
 </body>
 </html>
