@@ -23,25 +23,25 @@ jobs:
           target: /var/www/tharavad/
           strip_components: 1
 
-  deploy-caddy:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  # deploy-caddy:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - name: Copy Caddyfile to VPS
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: 187.127.143.52
-          username: root
-          key: ${{ secrets.VPS_SSH_KEY }}
-          source: "vps/Caddyfile"
-          target: /etc/caddy/Caddyfile
-          strip_components: 1
+  #     - name: Copy Caddyfile to VPS
+  #       uses: appleboy/scp-action@v0.1.7
+  #       with:
+  #         host: 187.127.143.52
+  #         username: root
+  #         key: ${{ secrets.VPS_SSH_KEY }}
+  #         source: "vps/Caddyfile"
+  #         target: /etc/caddy/Caddyfile
+  #         strip_components: 1
 
-      - name: Reload Caddy
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: 187.127.143.52
-          username: root
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: systemctl reload caddy
+  #     - name: Reload Caddy
+  #       uses: appleboy/ssh-action@v1.0.3
+  #       with:
+  #         host: 187.127.143.52
+  #         username: root
+  #         key: ${{ secrets.VPS_SSH_KEY }}
+  #         script: systemctl reload caddy
